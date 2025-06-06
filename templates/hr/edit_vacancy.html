@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}Редактировать вакансию - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>
+                    Редактирование вакансии
+                </h4>
+                <small class="text-muted">{{ vacancy.title }}</small>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Основная информация -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="title" class="form-label">
+                                Название должности <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="title" name="title" required
+                                   value="{{ vacancy.title }}"
+                                   placeholder="Например: Преподаватель программирования">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="position_rank" class="form-label">
+                                Должность <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="position_rank" name="position_rank" required>
+                                <option value="">Выберите должность</option>
+                                <option value="Преподаватель" {% if vacancy.position_rank == 'Преподаватель' %}selected{% endif %}>Преподаватель</option>
+                                <option value="Старший преподаватель" {% if vacancy.position_rank == 'Старший преподаватель' %}selected{% endif %}>Старший преподаватель</option>
+                                <option value="Профессор-практик" {% if vacancy.position_rank == 'Профессор-практик' %}selected{% endif %}>Профессор-практик</option>
+                                <option value="Ассоциированный профессор" {% if vacancy.position_rank == 'Ассоциированный профессор' %}selected{% endif %}>Ассоциированный профессор</option>
+                                <option value="Профессор" {% if vacancy.position_rank == 'Профессор' %}selected{% endif %}>Профессор</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="department_id" class="form-label">
+                                Департамент <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="department_id" name="department_id" required>
+                                <option value="">Выберите департамент</option>
+                                {% for department in departments %}
+                                    <option value="{{ department.id }}" {% if department.id == vacancy.department_id %}selected{% endif %}>
+                                        {{ department.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                        <label for="discipline" class="form-label">
+                            Дисциплина <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="discipline" name="discipline" required
+                               value="{{ vacancy.discipline }}"
+                               placeholder="Например: Основы программирования">
+                        </div>
+                    </div>
+                    
+                    <!-- Условия работы -->
+                    <h5 class="mt-4 mb-3">Условия работы</h5>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="employment_type" class="form-label">
+                                Тип занятости <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="employment_type" name="employment_type" required>
+                                <option value="">Выберите тип</option>
+                                {% for key, value in EMPLOYMENT_TYPES.items() %}
+                                    <option value="{{ key }}" {% if key == vacancy.employment_type %}selected{% endif %}>
+                                        {{ value }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="work_format" class="form-label">
+                                Формат работы <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="work_format" name="work_format" required>
+                                <option value="">Выберите формат</option>
+                                {% for key, value in WORK_FORMATS.items() %}
+                                    <option value="{{ key }}" {% if key == vacancy.work_format %}selected{% endif %}>
+                                        {{ value }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="contract_duration" class="form-label">Срок контракта</label>
+                            <input type="text" class="form-control" id="contract_duration" name="contract_duration"
+                                   value="{{ vacancy.contract_duration or '' }}"
+                                   placeholder="Например: 1 год">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="salary" class="form-label">Зарплата</label>
+                        <input type="text" class="form-control" id="salary" name="salary"
+                               value="{{ vacancy.salary or '' }}"
+                               placeholder="Например: 80,000 - 120,000 руб">
+                    </div>
+                    
+                    <!-- Требования -->
+                    <h5 class="mt-4 mb-3">Требования к кандидату</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="education_level" class="form-label">
+                                Уровень образования <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="education_level" name="education_level" required>
+                                <option value="">Выберите уровень</option>
+                                {% for key, value in EDUCATION_LEVELS.items() %}
+                                    <option value="{{ key }}" {% if key == vacancy.education_level %}selected{% endif %}>
+                                        {{ value }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="required_specialty" class="form-label">Требуемая специальность</label>
+                            <input type="text" class="form-control" id="required_specialty" name="required_specialty"
+                                   value="{{ vacancy.required_specialty or '' }}"
+                                   placeholder="Например: Информационные технологии">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="min_experience" class="form-label">
+                                Минимальный опыт работы (лет)
+                            </label>
+                            <input type="number" class="form-control" id="min_experience" name="min_experience" 
+                                   min="0" value="{{ vacancy.min_experience or 0 }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="scientific_activity_level" class="form-label">
+                                Уровень научной деятельности
+                            </label>
+                            <input type="text" class="form-control" id="scientific_activity_level" 
+                                   name="scientific_activity_level"
+                                   value="{{ vacancy.scientific_activity_level or '' }}"
+                                   placeholder="Например: Активная публикационная деятельность">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="additional_skills" class="form-label">Дополнительные навыки и требования</label>
+                        <textarea class="form-control" id="additional_skills" name="additional_skills" rows="3"
+                                  placeholder="Опишите дополнительные требования к кандидату">{{ vacancy.additional_skills or '' }}</textarea>
+                    </div>
+                    
+                    <!-- Тестирование -->
+                    <h5 class="mt-4 mb-3">Параметры отбора</h5>
+                    
+                    <!-- Выбор тестов -->
+                    <div class="mb-4">
+                        <label for="required_tests" class="form-label">
+                            Обязательные тесты для кандидатов
+                        </label>
+                        <select multiple class="form-select" id="required_tests" name="required_tests" size="6">
+                            {% for test in tests %}
+                                <option value="{{ test.id }}" {% if test.id in current_test_ids %}selected{% endif %}>
+                                    {{ test.name }} 
+                                    <span class="badge {{ 'bg-info' if test.type == 'iq' else 'bg-success' if test.type == 'eq' else 'bg-secondary' }}">
+                                        {{ test.type.upper() }}
+                                    </span>
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            Удерживайте Ctrl (Cmd на Mac) для выбора нескольких тестов. 
+                            Кандидаты должны будут пройти все выбранные тесты.
+                        </div>
+                        
+                        {% if not tests %}
+                            <div class="alert alert-warning mt-2">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                У вас пока нет созданных тестов. 
+                                <a href="{{ url_for('hr_create_test') }}" class="alert-link">Создать тест</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Сроки -->
+                    <h5 class="mt-4 mb-3">Временные рамки</h5>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="application_start" class="form-label">
+                                Начало приема заявок <span class="text-danger">*</span>
+                            </label>
+                            <input type="datetime-local" class="form-control" id="application_start" 
+                                   name="application_start" required
+                                   value="{{ vacancy.application_start.strftime('%Y-%m-%dT%H:%M') }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="application_end" class="form-label">
+                                Окончание приема заявок <span class="text-danger">*</span>
+                            </label>
+                            <input type="datetime-local" class="form-control" id="application_end" 
+                                   name="application_end" required
+                                   value="{{ vacancy.application_end.strftime('%Y-%m-%dT%H:%M') }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="work_start_date" class="form-label">Дата начала работы</label>
+                            <input type="date" class="form-control" id="work_start_date" name="work_start_date"
+                                   value="{{ vacancy.work_start_date.strftime('%Y-%m-%d') if vacancy.work_start_date else '' }}">
+                        </div>
+                    </div>
+                    
+                    <!-- Контактная информация -->
+                    <h5 class="mt-4 mb-3">Контактная информация</h5>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="contact_person" class="form-label">Контактное лицо</label>
+                            <input type="text" class="form-control" id="contact_person" name="contact_person"
+                                   value="{{ vacancy.contact_person or current_user.full_name }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="contact_email" class="form-label">Email для связи</label>
+                            <input type="email" class="form-control" id="contact_email" name="contact_email"
+                                   value="{{ vacancy.contact_email or current_user.email }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="contact_phone" class="form-label">Телефон</label>
+                            <input type="tel" class="form-control" id="contact_phone" name="contact_phone"
+                                   value="{{ vacancy.contact_phone or '' }}">
+                        </div>
+                    </div>
+                    
+                    <!-- Описание -->
+                    <div class="mb-4">
+                        <label for="description" class="form-label">Подробное описание вакансии</label>
+                        <textarea class="form-control" id="description" name="description" rows="6"
+                                  placeholder="Детальное описание обязанностей, требований, условий работы">{{ vacancy.description or '' }}</textarea>
+                    </div>
+                    
+                    <!-- Информация о заявках -->
+                    {% if vacancy.applications.count() > 0 %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Внимание!</strong> 
+                            На эту вакансию уже подано <strong>{{ vacancy.applications.count() }}</strong> заявок.
+                            Изменения могут повлиять на процесс отбора кандидатов.
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Кнопки -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('hr_vacancies') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Назад к списку
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            Сохранить изменения
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

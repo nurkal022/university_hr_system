@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+
+{% block title %}Создать тест - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-plus me-2"></i>
+                    Создание нового теста
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="test-form">
+                    <!-- Основная информация о тесте -->
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                        <label for="name" class="form-label">
+                            Название теста <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="name" name="name" required
+                                   placeholder="Например: Тест логического мышления для математиков">
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="test_creation_type" class="form-label">
+                                Способ создания <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="test_creation_type" name="test_creation_type" required>
+                                <option value="">Выберите способ</option>
+                                <option value="standard">Использовать стандартные вопросы</option>
+                                <option value="custom">Создать собственные вопросы</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Выбор типа для стандартных тестов -->
+                    <div id="standard-test-section" style="display: none;">
+                    <div class="mb-3">
+                        <label for="type" class="form-label">
+                                Тип стандартного теста <span class="text-danger">*</span>
+                        </label>
+                            <select class="form-select" id="type" name="type">
+                            <option value="">Выберите тип теста</option>
+                            <option value="iq">IQ - Тест интеллекта</option>
+                            <option value="eq">EQ - Тест эмоционального интеллекта</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Информация о типах тестов -->
+                    <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle me-2"></i>Информация о стандартных тестах</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>IQ тест включает:</strong>
+                                <ul class="mb-0 small">
+                                    <li>Логические последовательности</li>
+                                    <li>Математические задачи</li>
+                                    <li>Поиск закономерностей</li>
+                                    <li>Работа с числами и символами</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>EQ тест включает:</strong>
+                                <ul class="mb-0 small">
+                                    <li>Эмоциональную осведомленность</li>
+                                    <li>Управление эмоциями</li>
+                                    <li>Социальные навыки</li>
+                                    <li>Эмпатию и понимание других</li>
+                                </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Секция для создания собственных вопросов -->
+                    <div id="custom-test-section" style="display: none;">
+                        <input type="hidden" name="type" value="custom">
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5>Вопросы теста</h5>
+                            <button type="button" class="btn btn-outline-primary" id="add-question">
+                                <i class="fas fa-plus me-2"></i>
+                                Добавить вопрос
+                            </button>
+                        </div>
+                        
+                        <div id="questions-container">
+                            <!-- Вопросы будут добавляться здесь -->
+                        </div>
+                        
+                        <div class="alert alert-warning mt-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Минимум 5 вопросов требуется для создания теста
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('hr_tests') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Назад к списку
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="submit-btn">
+                            <i class="fas fa-save me-2"></i>
+                            Создать тест
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Шаблон для вопроса -->
+<template id="question-template">
+    <div class="card mb-3 question-card">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Вопрос <span class="question-number">1</span></h6>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-question">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">Текст вопроса <span class="text-danger">*</span></label>
+                <textarea class="form-control question-text" rows="2" required
+                          placeholder="Введите текст вопроса"></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Варианты ответов <span class="text-danger">*</span></label>
+                <div class="options-container">
+                    <!-- Варианты ответов -->
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary add-option">
+                    <i class="fas fa-plus me-1"></i>
+                    Добавить вариант
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- Шаблон для варианта ответа -->
+<template id="option-template">
+    <div class="input-group mb-2 option-row">
+        <div class="input-group-text">
+            <input class="form-check-input correct-answer" type="radio" name="" value="">
+        </div>
+        <input type="text" class="form-control option-text" placeholder="Вариант ответа" required>
+        <button class="btn btn-outline-danger remove-option" type="button">
+            <i class="fas fa-trash"></i>
+        </button>
+    </div>
+</template>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const testCreationType = document.getElementById('test_creation_type');
+    const standardSection = document.getElementById('standard-test-section');
+    const customSection = document.getElementById('custom-test-section');
+    const questionsContainer = document.getElementById('questions-container');
+    const addQuestionBtn = document.getElementById('add-question');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    let questionCounter = 0;
+    
+    // Переключение между типами создания теста
+    testCreationType.addEventListener('change', function() {
+        const type = this.value;
+        
+        if (type === 'standard') {
+            standardSection.style.display = 'block';
+            customSection.style.display = 'none';
+            document.getElementById('type').required = true;
+        } else if (type === 'custom') {
+            standardSection.style.display = 'none';
+            customSection.style.display = 'block';
+            document.getElementById('type').required = false;
+            
+            // Добавляем первый вопрос
+            if (questionCounter === 0) {
+                addQuestion();
+            }
+        } else {
+            standardSection.style.display = 'none';
+            customSection.style.display = 'none';
+        }
+    });
+    
+    // Добавление вопроса
+    addQuestionBtn.addEventListener('click', addQuestion);
+    
+    function addQuestion() {
+        questionCounter++;
+        
+        const template = document.getElementById('question-template');
+        const questionCard = template.content.cloneNode(true);
+        
+        // Устанавливаем номер вопроса
+        questionCard.querySelector('.question-number').textContent = questionCounter;
+        
+        // Настраиваем name атрибуты
+        const questionText = questionCard.querySelector('.question-text');
+        questionText.name = `questions[${questionCounter-1}][text]`;
+        
+        // Добавляем варианты ответов
+        const optionsContainer = questionCard.querySelector('.options-container');
+        for (let i = 0; i < 4; i++) {
+            addOption(optionsContainer, questionCounter-1, i);
+        }
+        
+        // Обработчик удаления вопроса
+        questionCard.querySelector('.remove-question').addEventListener('click', function() {
+            this.closest('.question-card').remove();
+            updateQuestionNumbers();
+        });
+        
+        // Обработчик добавления варианта
+        questionCard.querySelector('.add-option').addEventListener('click', function() {
+            const optionIndex = this.parentNode.querySelectorAll('.option-row').length;
+            addOption(optionsContainer, questionCounter-1, optionIndex);
+        });
+        
+        questionsContainer.appendChild(questionCard);
+    }
+    
+    function addOption(container, questionIndex, optionIndex) {
+        const template = document.getElementById('option-template');
+        const optionRow = template.content.cloneNode(true);
+        
+        // Настраиваем атрибуты
+        const radio = optionRow.querySelector('.correct-answer');
+        const input = optionRow.querySelector('.option-text');
+        
+        radio.name = `questions[${questionIndex}][correct]`;
+        radio.value = optionIndex;
+        input.name = `questions[${questionIndex}][options][${optionIndex}]`;
+        
+        // Обработчик удаления варианта
+        optionRow.querySelector('.remove-option').addEventListener('click', function() {
+            if (container.querySelectorAll('.option-row').length > 2) {
+                this.parentNode.remove();
+                updateOptionIndexes(container, questionIndex);
+            } else {
+                alert('Минимум 2 варианта ответа требуется');
+            }
+        });
+        
+        container.appendChild(optionRow);
+    }
+    
+    function updateQuestionNumbers() {
+        const questions = questionsContainer.querySelectorAll('.question-card');
+        questions.forEach((question, index) => {
+            question.querySelector('.question-number').textContent = index + 1;
+            
+            // Обновляем name атрибуты
+            const questionText = question.querySelector('.question-text');
+            questionText.name = `questions[${index}][text]`;
+            
+            const options = question.querySelectorAll('.option-text');
+            const radios = question.querySelectorAll('.correct-answer');
+            
+            radios.forEach(radio => {
+                radio.name = `questions[${index}][correct]`;
+            });
+            
+            options.forEach((option, optionIndex) => {
+                option.name = `questions[${index}][options][${optionIndex}]`;
+            });
+        });
+        
+        questionCounter = questions.length;
+    }
+    
+    function updateOptionIndexes(container, questionIndex) {
+        const options = container.querySelectorAll('.option-text');
+        const radios = container.querySelectorAll('.correct-answer');
+        
+        options.forEach((option, index) => {
+            option.name = `questions[${questionIndex}][options][${index}]`;
+        });
+        
+        radios.forEach((radio, index) => {
+            radio.value = index;
+        });
+    }
+    
+    // Валидация формы
+    document.getElementById('test-form').addEventListener('submit', function(e) {
+        const creationType = testCreationType.value;
+        
+        if (creationType === 'custom') {
+            const questions = questionsContainer.querySelectorAll('.question-card');
+            
+            if (questions.length < 5) {
+                e.preventDefault();
+                alert('Минимум 5 вопросов требуется для создания теста');
+                return;
+            }
+            
+            // Проверяем каждый вопрос
+            let isValid = true;
+            questions.forEach(question => {
+                const text = question.querySelector('.question-text').value.trim();
+                const options = Array.from(question.querySelectorAll('.option-text')).map(opt => opt.value.trim());
+                const correctAnswer = question.querySelector('.correct-answer:checked');
+                
+                if (!text) {
+                    isValid = false;
+                    alert('Все вопросы должны иметь текст');
+                    return;
+                }
+                
+                if (options.length < 2 || options.some(opt => !opt)) {
+                    isValid = false;
+                    alert('Каждый вопрос должен иметь минимум 2 заполненных варианта ответа');
+                    return;
+                }
+                
+                if (!correctAnswer) {
+                    isValid = false;
+                    alert('Для каждого вопроса должен быть выбран правильный ответ');
+                    return;
+                }
+            });
+            
+            if (!isValid) {
+                e.preventDefault();
+            }
+        }
+    });
+});
+</script>
+{% endblock %} 

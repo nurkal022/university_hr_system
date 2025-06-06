@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+
+{% block title %}Подать заявку - {{ vacancy.title }} - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h4 class="mb-1">
+                            <i class="fas fa-paper-plane me-2"></i>
+                            Подача заявки
+                        </h4>
+                        <h6 class="text-muted">{{ vacancy.title }} - {{ vacancy.department.name }}</h6>
+                    </div>
+                    <a href="{{ url_for('candidate_dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Назад
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Информация о вакансии -->
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle me-2"></i>Информация о вакансии</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Должность:</strong> {{ vacancy.title }}<br>
+                            <strong>Дисциплина:</strong> {{ vacancy.discipline }}<br>
+                            <strong>Тип занятости:</strong> {{ EMPLOYMENT_TYPES[vacancy.employment_type] }}<br>
+                            <strong>Формат работы:</strong> {{ WORK_FORMATS[vacancy.work_format] }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Образование:</strong> {{ EDUCATION_LEVELS[vacancy.education_level] }}<br>
+                            <strong>Опыт:</strong> от {{ vacancy.min_experience }} лет<br>
+                            <strong>Прием заявок до:</strong> {{ format_datetime(vacancy.application_end) }}<br>
+                            {% if vacancy.salary %}
+                                <strong>Зарплата:</strong> {{ vacancy.salary }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if vacancy.required_tests %}
+                        <div class="mt-2">
+                            <strong>Требуемые тесты:</strong>
+                            {% for test in vacancy.required_tests %}
+                                <span class="badge bg-info me-1">{{ test.name }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if last_application %}
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-check-circle me-2"></i>Автозаполнение</h6>
+                        <p class="mb-0">Форма автоматически заполнена данными из вашей предыдущей заявки. Вы можете изменить любые поля по необходимости.</p>
+                    </div>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('candidate_submit_application', vacancy_id=vacancy.id) }}" enctype="multipart/form-data">
+                    <!-- Личная информация -->
+                    <h5 class="mb-3">Личная информация</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="birth_date" class="form-label">Дата рождения</label>
+                            <input type="date" class="form-control" id="birth_date" name="birth_date"
+                                   value="{{ last_application.birth_date.strftime('%Y-%m-%d') if last_application and last_application.birth_date else '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="citizenship" class="form-label">Гражданство</label>
+                            <input type="text" class="form-control" id="citizenship" name="citizenship" 
+                                   placeholder="Например: Республика Казахстан"
+                                   value="{{ last_application.citizenship if last_application else '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="city" class="form-label">Город проживания</label>
+                            <input type="text" class="form-control" id="city" name="city" 
+                                   placeholder="Например: Алматы"
+                                   value="{{ last_application.city if last_application else '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="phone" class="form-label">Телефон</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" 
+                                   placeholder="+7 (xxx) xxx-xx-xx"
+                                   value="{{ last_application.phone if last_application else '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="marital_status" class="form-label">Семейное положение</label>
+                            <select class="form-select" id="marital_status" name="marital_status">
+                                <option value="">Не указано</option>
+                                <option value="single" {{ 'selected' if last_application and last_application.marital_status == 'single' else '' }}>Холост/Не замужем</option>
+                                <option value="married" {{ 'selected' if last_application and last_application.marital_status == 'married' else '' }}>Женат/Замужем</option>
+                                <option value="divorced" {{ 'selected' if last_application and last_application.marital_status == 'divorced' else '' }}>Разведен(а)</option>
+                                <option value="widowed" {{ 'selected' if last_application and last_application.marital_status == 'widowed' else '' }}>Вдовец/Вдова</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="military_status" class="form-label">Воинская обязанность</label>
+                            <input type="text" class="form-control" id="military_status" name="military_status" 
+                                   placeholder="Например: Служил, освобожден"
+                                   value="{{ last_application.military_status if last_application else '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="no_criminal_record" name="no_criminal_record"
+                                       {{ 'checked' if last_application and last_application.no_criminal_record else '' }}>
+                                <label class="form-check-label" for="no_criminal_record">
+                                    Отсутствие судимости
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="has_disability" name="has_disability"
+                                       {{ 'checked' if last_application and last_application.has_disability else '' }}>
+                                <label class="form-check-label" for="has_disability">
+                                    Наличие инвалидности
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_pensioner" name="is_pensioner"
+                                       {{ 'checked' if last_application and last_application.is_pensioner else '' }}>
+                                <label class="form-check-label" for="is_pensioner">
+                                    Пенсионер
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <!-- Опыт работы -->
+                    <h5 class="mt-4 mb-3">Опыт работы</h5>
+                    <div class="mb-3">
+                        <label for="work_experience" class="form-label">Опыт работы</label>
+                        <textarea class="form-control" id="work_experience" name="work_experience" rows="4" 
+                                  placeholder="Укажите места работы, должности, обязанности, периоды работы">{{ last_application.work_experience if last_application else '' }}</textarea>
+                    </div>
+
+                    <!-- Научная деятельность -->
+                    <h5 class="mt-4 mb-3">Научная деятельность</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="academic_degree" class="form-label">Ученая степень</label>
+                            <input type="text" class="form-control" id="academic_degree" name="academic_degree" 
+                                   placeholder="Например: Кандидат технических наук"
+                                   value="{{ last_application.academic_degree if last_application else '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="academic_title" class="form-label">Ученое звание</label>
+                            <input type="text" class="form-control" id="academic_title" name="academic_title" 
+                                   placeholder="Например: Доцент"
+                                   value="{{ last_application.academic_title if last_application else '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="title_date" class="form-label">Дата присвоения звания</label>
+                            <input type="date" class="form-control" id="title_date" name="title_date"
+                                   value="{{ last_application.title_date.strftime('%Y-%m-%d') if last_application and last_application.title_date else '' }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="publications_count" class="form-label">Количество публикаций</label>
+                            <input type="number" class="form-control" id="publications_count" name="publications_count" 
+                                   min="0" value="{{ last_application.publications_count if last_application else 0 }}">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="projects_count" class="form-label">Количество проектов</label>
+                            <input type="number" class="form-control" id="projects_count" name="projects_count" 
+                                   min="0" value="{{ last_application.projects_count if last_application else 0 }}">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="key_publications" class="form-label">Ключевые публикации</label>
+                        <textarea class="form-control" id="key_publications" name="key_publications" rows="3" 
+                                  placeholder="Перечислите наиболее значимые публикации">{{ last_application.key_publications if last_application else '' }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="projects_list" class="form-label">Участие в проектах</label>
+                        <textarea class="form-control" id="projects_list" name="projects_list" rows="3" 
+                                  placeholder="Перечислите научные проекты, в которых участвовали">{{ last_application.projects_list if last_application else '' }}</textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="h_index" class="form-label">Индекс Хирша</label>
+                            <input type="number" class="form-control" id="h_index" name="h_index" min="0"
+                                   value="{{ last_application.h_index if last_application and last_application.h_index else '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="patents" class="form-label">Патенты</label>
+                            <input type="text" class="form-control" id="patents" name="patents" 
+                                   placeholder="Количество или перечень патентов"
+                                   value="{{ last_application.patents if last_application else '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="degree_files" class="form-label">
+                            <i class="fas fa-file-pdf me-2 text-danger"></i>
+                            Документы об ученой степени и звании (PDF)
+                        </label>
+                        <input type="file" class="form-control" id="degree_files" name="degree_files" 
+                               multiple accept=".pdf">
+                        <div class="form-text">
+                            <small>
+                                <i class="fas fa-info-circle me-1"></i>
+                                Загрузите дипломы кандидата/доктора наук, аттестаты о присвоении ученого звания в формате PDF.
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Дополнительная информация -->
+                    <h5 class="mt-4 mb-3">Дополнительная информация</h5>
+                    <div class="mb-3">
+                        <label for="courses" class="form-label">Курсы повышения квалификации</label>
+                        <textarea class="form-control" id="courses" name="courses" rows="2" 
+                                  placeholder="Перечислите курсы, тренинги, сертификации">{{ last_application.courses if last_application else '' }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="course_certificates" class="form-label">
+                            <i class="fas fa-file-pdf me-2 text-danger"></i>
+                            Сертификаты курсов повышения квалификации (PDF)
+                        </label>
+                        <input type="file" class="form-control" id="course_certificates" name="course_certificates" 
+                               multiple accept=".pdf">
+                        <div class="form-text">
+                            <small>
+                                <i class="fas fa-info-circle me-1"></i>
+                                Загрузите сертификаты о прохождении курсов повышения квалификации за последние 3 года.
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="languages" class="form-label">Знание языков</label>
+                        <textarea class="form-control" id="languages" name="languages" rows="2" 
+                                  placeholder="Укажите языки и уровень владения">{{ last_application.languages if last_application else '' }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="language_certificates" class="form-label">
+                            <i class="fas fa-file-pdf me-2 text-danger"></i>
+                            Сертификаты владения иностранными языками (PDF)
+                        </label>
+                        <input type="file" class="form-control" id="language_certificates" name="language_certificates" 
+                               multiple accept=".pdf">
+                        <div class="form-text">
+                            <small>
+                                <i class="fas fa-info-circle me-1"></i>
+                                Загрузите сертификаты IELTS, TOEFL, Cambridge и другие документы о владении языками.
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="awards" class="form-label">Награды и достижения</label>
+                        <textarea class="form-control" id="awards" name="awards" rows="2" 
+                                  placeholder="Перечислите награды, почетные звания, достижения">{{ last_application.awards if last_application else '' }}</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="award_documents" class="form-label">
+                            <i class="fas fa-file-pdf me-2 text-danger"></i>
+                            Документы о наградах и достижениях (PDF)
+                        </label>
+                        <input type="file" class="form-control" id="award_documents" name="award_documents" 
+                               multiple accept=".pdf">
+                        <div class="form-text">
+                            <small>
+                                <i class="fas fa-info-circle me-1"></i>
+                                Загрузите дипломы, грамоты, свидетельства о наградах и достижениях.
+                            </small>
+                        </div>
+                    </div>
+
+
+
+                    <!-- Согласия -->
+                    <h5 class="mt-4 mb-3">Согласия</h5>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="data_processing_consent" 
+                                   name="data_processing_consent" required
+                                   {{ 'checked' if last_application and last_application.data_processing_consent else '' }}>
+                            <label class="form-check-label" for="data_processing_consent">
+                                Согласие на обработку персональных данных <span class="text-danger">*</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="video_audio_consent" 
+                                   name="video_audio_consent"
+                                   {{ 'checked' if last_application and last_application.video_audio_consent else '' }}>
+                            <label class="form-check-label" for="video_audio_consent">
+                                Согласие на видео/аудио запись интервью
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Информация о тестах -->
+                    {% if vacancy.required_tests %}
+                        <div class="alert alert-warning">
+                            <h6><i class="fas fa-exclamation-triangle me-2"></i>Внимание!</h6>
+                            <p class="mb-2">После подачи заявки вам необходимо будет пройти следующие тесты:</p>
+                            <ul class="mb-0">
+                                {% for test in vacancy.required_tests %}
+                                    <li><strong>{{ test.name }}</strong> - {{ test.description }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('candidate_dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Отменить
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-2"></i>
+                            Подать заявку
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %} 

@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Настройки Email - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-envelope-cog me-2"></i>
+        Настройки Email
+    </h1>
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>
+        Назад к панели
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Текущие настройки -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cog me-2"></i>
+                    Текущие настройки
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Режим:</strong> 
+                            <span class="badge {{ 'bg-warning' if email_config['TESTING_MODE'] else 'bg-success' }}">
+                                {{ 'Тестовый' if email_config['TESTING_MODE'] else 'Рабочий' }}
+                            </span>
+                        </p>
+                        <p><strong>SMTP Сервер:</strong> {{ email_config['SMTP_SERVER'] }}</p>
+                        <p><strong>Порт:</strong> {{ email_config['SMTP_PORT'] }}</p>
+                        <p><strong>TLS:</strong> {{ 'Да' if email_config['SMTP_USE_TLS'] else 'Нет' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Имя отправителя:</strong> {{ email_config['FROM_NAME'] }}</p>
+                        <p><strong>Email отправителя:</strong> {{ email_config['FROM_EMAIL'] }}</p>
+                        <p><strong>Пользователь SMTP:</strong> {{ email_config['SMTP_USERNAME'] or 'Не настроено' }}</p>
+                        <p><strong>Пароль:</strong> {{ '●●●●●●●●' if email_config['SMTP_PASSWORD'] else 'Не настроен' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Тест отправки -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-paper-plane me-2"></i>
+                    Тест отправки Email
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin_test_email') }}">
+                    <div class="mb-3">
+                        <label for="test_email" class="form-label">Email для тестирования</label>
+                        <input type="email" class="form-control" id="test_email" name="test_email" 
+                               placeholder="test@example.com" required>
+                        <div class="form-text">Введите email, на который отправить тестовое письмо</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="test_subject" class="form-label">Тема письма</label>
+                        <input type="text" class="form-control" id="test_subject" name="test_subject" 
+                               value="Тест HR платформы АУЭС" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="test_message" class="form-label">Сообщение</label>
+                        <textarea class="form-control" id="test_message" name="test_message" rows="4" required>Это тестовое письмо от HR платформы АУЭС.
+
+Если вы получили это сообщение, значит настройки email работают корректно.
+
+С уважением,
+Администрация АУЭС</textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane me-2"></i>
+                        Отправить тестовое письмо
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Быстрые настройки -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightning me-2"></i>
+                    Быстрые настройки
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Популярные SMTP провайдеры:</p>
+                
+                {% for provider_id, provider in smtp_providers.items() %}
+                    <div class="border rounded p-3 mb-3">
+                        <strong>{{ provider['description'] }}</strong><br>
+                        <small class="text-muted">
+                            {{ provider['server'] }}:{{ provider['port'] }}
+                            {{ '(TLS)' if provider['use_tls'] else '' }}
+                        </small>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Инструкции -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Инструкции по настройке
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="emailInstructions">
+                    <!-- Gmail -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#gmail-setup">
+                                Gmail
+                            </button>
+                        </h2>
+                        <div id="gmail-setup" class="accordion-collapse collapse" data-bs-parent="#emailInstructions">
+                            <div class="accordion-body">
+                                <small>
+                                    1. Включите двухфакторную аутентификацию<br>
+                                    2. Создайте пароль приложения в настройках Google<br>
+                                    3. Используйте этот пароль вместо основного<br>
+                                    4. Сервер: smtp.gmail.com:587
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Переменные окружения -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#env-setup">
+                                Переменные окружения
+                            </button>
+                        </h2>
+                        <div id="env-setup" class="accordion-collapse collapse" data-bs-parent="#emailInstructions">
+                            <div class="accordion-body">
+                                <code style="font-size: 11px;">
+                                    EMAIL_TESTING_MODE=false<br>
+                                    SMTP_SERVER=smtp.gmail.com<br>
+                                    SMTP_PORT=587<br>
+                                    SMTP_USERNAME=your@gmail.com<br>
+                                    SMTP_PASSWORD=your_app_password<br>
+                                    SMTP_USE_TLS=true<br>
+                                    FROM_NAME=АУЭС HR<br>
+                                    FROM_EMAIL=hr@aues.kz
+                                </code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Режим тестирования -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-flask me-2"></i>
+                    Режим тестирования
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if email_config['TESTING_MODE'] %}
+                    <div class="alert alert-warning">
+                        <strong>Включен тестовый режим</strong><br>
+                        Письма не отправляются, только логируются в консоль.
+                    </div>
+                {% else %}
+                    <div class="alert alert-success">
+                        <strong>Рабочий режим</strong><br>
+                        Письма отправляются реальным получателям.
+                    </div>
+                {% endif %}
+                
+                <small class="text-muted">
+                    Для изменения режима установите переменную окружения 
+                    <code>EMAIL_TESTING_MODE</code> в <code>true</code> или <code>false</code>
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if messages %}
+    {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+{% endblock %} 

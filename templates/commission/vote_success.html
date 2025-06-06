@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Голосование завершено - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="text-center">
+            <i class="fas fa-check-circle fa-5x text-success mb-4"></i>
+            <h2 class="text-success">Голосование завершено</h2>
+            <p class="lead">Ваш голос успешно принят и учтен в системе.</p>
+            
+            <div class="alert alert-info mt-4">
+                <h6><i class="fas fa-info-circle me-2"></i>Что происходит дальше?</h6>
+                <p class="mb-0">
+                    HR специалист получит результаты всех голосований и примет финальное решение 
+                    по кандидату. Результат будет сообщен кандидату по email.
+                </p>
+            </div>
+            
+            <div class="mt-4">
+                <small class="text-muted">
+                    Спасибо за участие в процессе отбора!<br>
+                    Ваша экспертная оценка помогает улучшить качество найма в университете.
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

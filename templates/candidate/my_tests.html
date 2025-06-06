@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Мои тесты - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-clipboard-check me-2"></i>
+        Мои тесты
+    </h1>
+    <a href="{{ url_for('candidate_dashboard') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>
+        Назад к заявкам
+    </a>
+</div>
+
+<!-- Незавершенные тесты -->
+{% if pending_tests %}
+    <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Незавершенные тесты ({{ pending_tests|length }})
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <i class="fas fa-info-circle me-2"></i>
+                Для продолжения рассмотрения ваших заявок необходимо пройти все обязательные тесты.
+            </div>
+            
+            <div class="row">
+                {% for test_info in pending_tests %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card h-100 border-warning">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-clipboard-list fa-2x text-warning"></i>
+                                </div>
+                                <h6 class="card-title">{{ test_info.test.name }}</h6>
+                                <p class="card-text">
+                                    <span class="badge {{ 'bg-info' if test_info.test.type == 'iq' else 'bg-success' if test_info.test.type == 'eq' else 'bg-secondary' }}">
+                                        {{ test_info.test.type.upper() if test_info.test.type != 'custom' else 'ПОЛЬЗОВАТЕЛЬСКИЙ' }}
+                                    </span>
+                                </p>
+                                <p class="small text-muted">
+                                    <strong>Заявка:</strong> {{ test_info.application.vacancy.title }}<br>
+                                    {% set questions_count = (test_info.test.questions | from_json | length) %}
+                                    <strong>Вопросов:</strong> {{ questions_count }}
+                                </p>
+                                <a href="{{ url_for('candidate_take_test', app_id=test_info.application.id, test_id=test_info.test.id) }}" 
+                                   class="btn btn-warning">
+                                    <i class="fas fa-play me-2"></i>
+                                    Пройти тест
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Завершенные тесты -->
+{% if completed_tests %}
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-check-circle me-2"></i>
+                Завершенные тесты ({{ completed_tests|length }})
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for test_info in completed_tests %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card h-100 border-success">
+                            <div class="card-body text-center">
+                                <div class="mb-3">
+                                    <i class="fas fa-check-circle fa-2x text-success"></i>
+                                </div>
+                                <h6 class="card-title">{{ test_info.test.name }}</h6>
+                                <p class="card-text">
+                                    <span class="badge {{ 'bg-info' if test_info.test.type == 'iq' else 'bg-success' if test_info.test.type == 'eq' else 'bg-secondary' }}">
+                                        {{ test_info.test.type.upper() if test_info.test.type != 'custom' else 'ПОЛЬЗОВАТЕЛЬСКИЙ' }}
+                                    </span>
+                                </p>
+                                <p class="small text-muted">
+                                    <strong>Заявка:</strong> {{ test_info.application.vacancy.title }}<br>
+                                    <strong>Результат:</strong> {{ test_info.result.score }}/{{ test_info.result.max_score }}<br>
+                                    <strong>Дата:</strong> {{ format_datetime(test_info.result.completed_at) }}
+                                </p>
+                                <div class="badge bg-success">
+                                    Тест пройден
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Если нет тестов -->
+{% if not pending_tests and not completed_tests %}
+    <div class="text-center py-5">
+        <i class="fas fa-clipboard-check fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">У вас пока нет тестов</h4>
+        <p class="text-muted">Тесты появляются после подачи заявок на вакансии, которые требуют прохождения тестирования.</p>
+        <a href="{{ url_for('candidate_vacancies') }}" class="btn btn-primary">
+            <i class="fas fa-search me-2"></i>
+            Найти вакансии
+        </a>
+    </div>
+{% endif %}
+
+<!-- Информация о тестировании -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-info-circle me-2"></i>
+            Информация о тестировании
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Рекомендации для прохождения:</h6>
+                <ul class="small">
+                    <li>Внимательно читайте каждый вопрос</li>
+                    <li>Отвечайте честно и обдуманно</li>
+                    <li>Не торопитесь, время не ограничено</li>
+                    <li>Если сомневаетесь, выбирайте наиболее подходящий вариант</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h6>Технические требования:</h6>
+                <ul class="small">
+                    <li>Стабильное интернет-соединение</li>
+                    <li>Современный браузер</li>
+                    <li>Не закрывайте страницу во время теста</li>
+                    <li>Результаты сохраняются автоматически</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

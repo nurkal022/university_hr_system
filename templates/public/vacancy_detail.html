@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}{{ vacancy.title }} - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h1 class="h4 mb-1">{{ vacancy.title }}</h1>
+                        <h6 class="text-muted mb-0">
+                            <i class="fas fa-building me-2"></i>
+                            {{ vacancy.department.name }}
+                        </h6>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted">
+                            Опубликовано {{ format_date(vacancy.created_at) }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Основная информация -->
+                <div class="row mb-4">
+                    {% if vacancy.position_rank %}
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-user-tie me-2"></i>Должность</h6>
+                            <p>{{ vacancy.position_rank }}</p>
+                        </div>
+                    {% endif %}
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-book me-2"></i>Дисциплина</h6>
+                        <p>{{ vacancy.discipline }}</p>
+                    </div>
+                    {% if vacancy.salary %}
+                    <div class="col-md-6">
+                            <h6><i class="fas fa-money-bill-wave me-2"></i>Зарплата</h6>
+                            <p>{{ vacancy.salary }}</p>
+                        </div>
+                        {% endif %}
+                </div>
+
+                <!-- Условия работы -->
+                <h5 class="mb-3">Условия работы</h5>
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="text-center p-3 border rounded">
+                            <i class="fas fa-clock fa-2x text-primary mb-2"></i>
+                            <h6>Занятость</h6>
+                            <p class="mb-0">{{ EMPLOYMENT_TYPES[vacancy.employment_type] }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-3 border rounded">
+                            <i class="fas fa-laptop-house fa-2x text-success mb-2"></i>
+                            <h6>Формат работы</h6>
+                            <p class="mb-0">{{ WORK_FORMATS[vacancy.work_format] }}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        {% if vacancy.contract_duration %}
+                            <div class="text-center p-3 border rounded">
+                                <i class="fas fa-calendar-alt fa-2x text-info mb-2"></i>
+                                <h6>Срок контракта</h6>
+                                <p class="mb-0">{{ vacancy.contract_duration }}</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Требования -->
+                <h5 class="mb-3">Требования к кандидату</h5>
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-graduation-cap me-2"></i>Образование</h6>
+                        <p>{{ EDUCATION_LEVELS[vacancy.education_level] }}</p>
+                        
+                        {% if vacancy.required_specialty %}
+                            <h6><i class="fas fa-certificate me-2"></i>Специальность</h6>
+                            <p>{{ vacancy.required_specialty }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-briefcase me-2"></i>Опыт работы</h6>
+                        <p>Минимум {{ vacancy.min_experience }} 
+                           {{ 'год' if vacancy.min_experience == 1 else 'лет' if vacancy.min_experience < 5 else 'лет' }}</p>
+                        
+                        {% if vacancy.scientific_activity_level %}
+                            <h6><i class="fas fa-flask me-2"></i>Научная деятельность</h6>
+                            <p>{{ vacancy.scientific_activity_level }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if vacancy.additional_skills %}
+                    <h6><i class="fas fa-plus-circle me-2"></i>Дополнительные требования</h6>
+                    <p>{{ vacancy.additional_skills }}</p>
+                {% endif %}
+
+                <!-- Описание -->
+                {% if vacancy.description %}
+                    <h5 class="mb-3">Описание вакансии</h5>
+                    <div class="p-3 bg-light rounded">
+                        {{ vacancy.description|nl2br|safe }}
+                    </div>
+                {% endif %}
+
+                <!-- Тестирование -->
+                {% if vacancy.required_tests %}
+                    <h5 class="mb-3 mt-4">Обязательное тестирование</h5>
+                    <p class="text-muted mb-3">Кандидатам необходимо будет пройти следующие тесты:</p>
+                    <div class="row">
+                        {% for test in vacancy.required_tests %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-primary">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-clipboard-check fa-2x text-primary mb-2"></i>
+                                        <h6 class="card-title">{{ test.name }}</h6>
+                                        <p class="card-text">
+                                            <span class="badge {{ 'bg-info' if test.type == 'iq' else 'bg-success' if test.type == 'eq' else 'bg-secondary' }}">
+                                                {{ test.type.upper() if test.type != 'custom' else 'ПОЛЬЗОВАТЕЛЬСКИЙ' }}
+                                            </span>
+                                        </p>
+                                        <small class="text-muted">
+                                            {% set questions_count = (test.questions | from_json | length) %}
+                                            {{ questions_count }} вопросов
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <!-- Важные даты -->
+                <h5 class="mb-3 mt-4">Важные даты</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-play-circle me-2 text-success"></i>Начало приема заявок</h6>
+                        <p>{{ format_datetime(vacancy.application_start) }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-stop-circle me-2 text-danger"></i>Окончание приема заявок</h6>
+                        <p>{{ format_datetime(vacancy.application_end) }}</p>
+                    </div>
+                </div>
+                
+                {% if vacancy.work_start_date %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-calendar-start me-2 text-primary"></i>Начало работы</h6>
+                            <p>{{ format_date(vacancy.work_start_date) }}</p>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Контактная информация -->
+                {% if vacancy.contact_person or vacancy.contact_email or vacancy.contact_phone %}
+                    <h5 class="mb-3 mt-4">Контактная информация</h5>
+                    <div class="p-3 bg-light rounded">
+                        {% if vacancy.contact_person %}
+                            <p><i class="fas fa-user me-2"></i><strong>Контактное лицо:</strong> {{ vacancy.contact_person }}</p>
+                        {% endif %}
+                        {% if vacancy.contact_email %}
+                            <p><i class="fas fa-envelope me-2"></i><strong>Email:</strong> 
+                                <a href="mailto:{{ vacancy.contact_email }}">{{ vacancy.contact_email }}</a>
+                            </p>
+                        {% endif %}
+                        {% if vacancy.contact_phone %}
+                            <p class="mb-0"><i class="fas fa-phone me-2"></i><strong>Телефон:</strong> 
+                                <a href="tel:{{ vacancy.contact_phone }}">{{ vacancy.contact_phone }}</a>
+                            </p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Боковая панель -->
+    <div class="col-lg-4">
+        <div class="sticky-top" style="top: 20px;">
+            <!-- Действия -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-paper-plane me-2"></i>
+                        Подача заявки
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    {% if user_application %}
+                        <!-- Уже подана заявка -->
+                        <div class="alert alert-success mb-3">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Заявка подана
+                        </div>
+                        <p class="text-muted mb-3">
+                            Статус: <strong>{{ APPLICATION_STATUSES[user_application.status] }}</strong>
+                        </p>
+                        <a href="{{ url_for('candidate_dashboard') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-tachometer-alt me-2"></i>
+                            Перейти к заявке
+                        </a>
+                    {% elif not current_user.is_authenticated %}
+                        <!-- Неавторизованный пользователь -->
+                        <p class="text-muted mb-3">Для подачи заявки необходимо зарегистрироваться</p>
+                        <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg w-100 mb-2">
+                            <i class="fas fa-user-plus me-2"></i>
+                            Зарегистрироваться
+                        </a>
+                        <a href="{{ url_for('login') }}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-sign-in-alt me-2"></i>
+                            Уже есть аккаунт?
+                        </a>
+                    {% elif current_user.role != 'candidate' %}
+                        <!-- Не кандидат -->
+                        <p class="text-muted">Подавать заявки могут только кандидаты</p>
+                    {% else %}
+                        <!-- Кандидат может подать заявку -->
+                        <a href="{{ url_for('candidate_apply', vacancy_id=vacancy.id) }}" 
+                           class="btn btn-success btn-lg w-100">
+                            <i class="fas fa-paper-plane me-2"></i>
+                            Подать заявку
+                        </a>
+                        <small class="text-muted mt-2 d-block">
+                            После подачи заявки вам потребуется пройти тестирование
+                        </small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Статистика -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Статистика
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h4 class="text-primary">{{ vacancy.applications.count() }}</h4>
+                            <small class="text-muted">Заявок</small>
+                        </div>
+                        <div class="col-6">
+                            {% set now = moment() %}
+                            {% set days_left = (vacancy.application_end.date() - now.date()).days %}
+                            <h4 class="text-info">{{ days_left if days_left > 0 else 0 }}</h4>
+                            <small class="text-muted">Дней осталось</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <a href="{{ url_for('public_vacancies') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>
+            Вернуться к списку вакансий
+        </a>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,870 @@
+{% extends "base.html" %}
+
+{% block title %}Заявка {{ application.candidate.full_name }} - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-file-alt me-2"></i>
+        Заявка #{{ application.id }} - {{ application.candidate.full_name }}
+    </h1>
+    <div>
+        <span class="badge {{ get_status_badge_class(application.status) }} fs-6">
+            {{ APPLICATION_STATUSES[application.status] }}
+        </span>
+        <a href="{{ url_for('dept_dashboard') }}" class="btn btn-outline-secondary ms-2">
+            <i class="fas fa-arrow-left me-1"></i>
+            Назад к списку
+        </a>
+    </div>
+</div>
+
+<!-- Горизонтальный Timeline этапов заявки -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-route me-2"></i>
+            Этапы рассмотрения заявки
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="horizontal-timeline">
+            {% set all_tests_completed = check_all_tests_completed_for_application(application) %}
+            
+            <!-- Подача заявки -->
+            <div class="timeline-step completed">
+                <div class="step-marker bg-success">
+                    <i class="fas fa-paper-plane text-white"></i>
+                </div>
+                <div class="step-content">
+                    <h6 class="mb-1">Заявка подана</h6>
+                    <small class="text-muted">{{ format_datetime(application.created_at) }}</small>
+                </div>
+            </div>
+
+            <!-- Прохождение тестов -->
+            <div class="timeline-step {{ 'completed' if all_tests_completed else 'in-progress' if application.status not in ['pending'] else 'pending' }}">
+                <div class="step-marker {{ 'bg-success' if all_tests_completed else 'bg-warning' if application.status not in ['pending'] else 'bg-secondary' }}">
+                    <i class="fas fa-clipboard-check text-white"></i>
+                </div>
+                <div class="step-content">
+                    <h6 class="mb-1">Тесты</h6>
+                    {% if all_tests_completed %}
+                        <small class="text-success">Пройдены</small>
+                    {% elif application.status == 'pending' %}
+                        <small class="text-secondary">Ожидают</small>
+                    {% else %}
+                        <small class="text-warning">В процессе</small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Рассмотрение HR -->
+            <div class="timeline-step {{ 'completed' if application.hr_decision else 'in-progress' if application.status in ['hr_review'] else 'pending' }}">
+                <div class="step-marker {{ 'bg-success' if application.hr_decision == 'approve' else 'bg-danger' if application.hr_decision == 'reject' else 'bg-info' if application.status == 'hr_review' else 'bg-secondary' }}">
+                    <i class="fas fa-user-tie text-white"></i>
+                </div>
+                <div class="step-content">
+                    <h6 class="mb-1">HR</h6>
+                    {% if application.hr_decision %}
+                        <small class="text-{{ 'success' if application.hr_decision == 'approve' else 'danger' if application.hr_decision == 'reject' else 'warning' }}">
+                            {{ {'approve': 'Одобрено', 'reject': 'Отклонено', 'revise': 'На доработку'}[application.hr_decision] }}
+                        </small>
+                    {% elif application.status == 'hr_review' %}
+                        <small class="text-info">Рассмотрение</small>
+                    {% else %}
+                        <small class="text-secondary">Ожидает</small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Рассмотрение департамента -->
+            <div class="timeline-step {{ 'completed' if application.dept_decision else 'in-progress' if application.status in ['dept_review'] else 'pending' }}">
+                <div class="step-marker {{ 'bg-success' if application.dept_decision == 'recommend' else 'bg-danger' if application.dept_decision == 'reject' else 'bg-info' if application.status == 'dept_review' else 'bg-secondary' }}">
+                    <i class="fas fa-building text-white"></i>
+                </div>
+                <div class="step-content">
+                    <h6 class="mb-1">Департамент</h6>
+                    {% if application.dept_decision %}
+                        <small class="text-{{ 'success' if application.dept_decision == 'recommend' else 'danger' }}">
+                            {{ {'recommend': 'Рекомендован', 'reject': 'Отклонен'}[application.dept_decision] }}
+                        </small>
+                    {% elif application.status == 'dept_review' %}
+                        <small class="text-info">Рассмотрение</small>
+                    {% else %}
+                        <small class="text-secondary">Ожидает</small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Интервью -->
+            <div class="timeline-step {{ 'completed' if application.status in ['voting', 'approved', 'rejected'] and application.interview_date else 'in-progress' if application.status == 'interview_scheduled' else 'pending' }}">
+                <div class="step-marker {{ 'bg-success' if application.status in ['voting', 'approved', 'rejected'] and application.interview_date else 'bg-info' if application.status == 'interview_scheduled' else 'bg-secondary' }}">
+                    <i class="fas fa-comments text-white"></i>
+                </div>
+                <div class="step-content">
+                    <h6 class="mb-1">Интервью</h6>
+                    {% if application.interview_date %}
+                        {% if application.status == 'interview_scheduled' %}
+                            <small class="text-info">Назначено</small>
+                        {% else %}
+                            <small class="text-success">Проведено</small>
+                        {% endif %}
+                    {% else %}
+                        <small class="text-secondary">Ожидает</small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Голосование -->
+            <div class="timeline-step {{ 'completed' if application.status in ['approved', 'rejected'] else 'in-progress' if application.status == 'voting' else 'pending' }}">
+                <div class="step-marker {{ 'bg-success' if application.status == 'approved' else 'bg-danger' if application.status == 'rejected' else 'bg-info' if application.status == 'voting' else 'bg-secondary' }}">
+                    <i class="fas fa-vote-yea text-white"></i>
+                </div>
+                <div class="step-content">
+                    <h6 class="mb-1">Голосование</h6>
+                    {% if application.status == 'voting' %}
+                        <small class="text-info">Идет</small>
+                    {% elif application.status in ['approved', 'rejected'] %}
+                        <small class="text-{{ 'success' if application.status == 'approved' else 'danger' }}">
+                            {{ 'Одобрено' if application.status == 'approved' else 'Отклонено' }}
+                        </small>
+                    {% else %}
+                        <small class="text-secondary">Ожидает</small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Финальное решение -->
+            <div class="timeline-step {{ 'completed' if application.final_decision else 'pending' }}">
+                <div class="step-marker {{ 'bg-success' if application.final_decision == 'approved' else 'bg-danger' if application.final_decision == 'rejected' else 'bg-secondary' }}">
+                    <i class="fas fa-flag-checkered text-white"></i>
+                </div>
+                <div class="step-content">
+                    <h6 class="mb-1">Решение</h6>
+                    {% if application.final_decision %}
+                        <small class="text-{{ 'success' if application.final_decision == 'approved' else 'danger' }}">
+                            {{ 'Принят' if application.final_decision == 'approved' else 'Отклонен' }}
+                        </small>
+                    {% else %}
+                        <small class="text-secondary">Ожидает</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Основная информация -->
+    <div class="col-lg-8">
+        <!-- Информация о вакансии -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-briefcase me-2"></i>
+                    Информация о вакансии
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Должность:</strong> {{ application.vacancy.title }}<br>
+                        <strong>Дисциплина:</strong> {{ application.vacancy.discipline }}<br>
+                        <strong>Департамент:</strong> {{ application.vacancy.department.name }}<br>
+                        <strong>Тип занятости:</strong> {{ EMPLOYMENT_TYPES[application.vacancy.employment_type] }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Формат работы:</strong> {{ WORK_FORMATS[application.vacancy.work_format] }}<br>
+                        <strong>Уровень образования:</strong> {{ EDUCATION_LEVELS[application.vacancy.education_level] }}<br>
+                        {% if application.vacancy.salary %}
+                            <strong>Зарплата:</strong> {{ application.vacancy.salary }}<br>
+                        {% endif %}
+                        <strong>Дата подачи:</strong> {{ format_datetime(application.created_at) }}
+                    </div>
+                </div>
+                {% if application.vacancy.description %}
+                    <div class="mt-3">
+                        <strong>Описание:</strong><br>
+                        <div class="ms-3">{{ application.vacancy.description | nl2br | safe }}</div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Детальная информация о кандидате -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-user me-2"></i>
+                    Информация о кандидате
+                </h5>
+                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#candidateDetails">
+                    <i class="fas fa-eye me-1"></i>
+                    Показать все
+                </button>
+            </div>
+            <div class="card-body">
+                <!-- Основная информация -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>ФИО:</strong> {{ application.candidate.full_name }}<br>
+                        <strong>Email:</strong> {{ application.candidate.email }}<br>
+                        {% if application.phone %}
+                            <strong>Телефон:</strong> {{ application.phone }}<br>
+                        {% endif %}
+                        {% if application.birth_date %}
+                            <strong>Возраст:</strong> {{ application.birth_date | age }} лет<br>
+                        {% endif %}
+                        {% if application.citizenship %}
+                            <strong>Гражданство:</strong> {{ application.citizenship }}<br>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        {% if application.city %}
+                            <strong>Город:</strong> {{ application.city }}<br>
+                        {% endif %}
+                        {% if application.marital_status %}
+                            <strong>Семейное положение:</strong> {{ application.marital_status }}<br>
+                        {% endif %}
+                        {% if application.military_status %}
+                            <strong>Воинская обязанность:</strong> {{ application.military_status }}<br>
+                        {% endif %}
+                        <strong>Судимость:</strong> {{ 'Нет' if application.no_criminal_record else 'Не указано' }}<br>
+                        <strong>Инвалидность:</strong> {{ 'Да' if application.has_disability else 'Нет' }}
+                    </div>
+                </div>
+
+                <!-- Развернутая информация -->
+                <div class="collapse mt-4" id="candidateDetails">
+                    <!-- Опыт работы -->
+                    {% if application.work_experience %}
+                        <div class="mb-4">
+                            <h6><i class="fas fa-briefcase me-2"></i>Опыт работы</h6>
+                            <div class="ms-3 p-3 bg-light rounded">{{ application.work_experience | nl2br | safe }}</div>
+                    </div>
+                {% endif %}
+                
+                    <!-- Научная деятельность -->
+                    <div class="mb-4">
+                        <h6><i class="fas fa-microscope me-2"></i>Научная деятельность</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        {% if application.academic_degree %}
+                            <strong>Ученая степень:</strong> {{ application.academic_degree }}<br>
+                        {% endif %}
+                        {% if application.academic_title %}
+                            <strong>Ученое звание:</strong> {{ application.academic_title }}<br>
+                        {% endif %}
+                        {% if application.title_date %}
+                            <strong>Дата присвоения:</strong> {{ format_date(application.title_date) }}<br>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Публикации:</strong> {{ application.publications_count or 0 }}<br>
+                        <strong>Проекты:</strong> {{ application.projects_count or 0 }}<br>
+                        {% if application.h_index %}
+                            <strong>Индекс Хирша:</strong> {{ application.h_index }}<br>
+                        {% endif %}
+                    </div>
+                        </div>
+
+                        {% if application.key_publications %}
+                            <div class="mt-3">
+                                <strong>Ключевые публикации:</strong>
+                                <div class="ms-3 p-3 bg-light rounded">{{ application.key_publications | nl2br | safe }}</div>
+                            </div>
+                        {% endif %}
+
+                        {% if application.projects_list %}
+                            <div class="mt-3">
+                                <strong>Проекты:</strong>
+                                <div class="ms-3 p-3 bg-light rounded">{{ application.projects_list | nl2br | safe }}</div>
+                            </div>
+                        {% endif %}
+
+                        {% if application.patents %}
+                            <div class="mt-3">
+                                <strong>Патенты:</strong>
+                                <div class="ms-3 p-3 bg-light rounded">{{ application.patents | nl2br | safe }}</div>
+                            </div>
+                        {% endif %}
+                        
+                        {% if application.degree_files %}
+                            <div class="mt-3">
+                                <strong>Документы об ученой степени и звании:</strong>
+                                <div class="mt-2">
+                                    {% for file in application.degree_files | from_json %}
+                                        <a href="{{ url_for('download_document', filename='degrees/' + file) }}" 
+                                           class="btn btn-sm btn-outline-danger me-2 mb-2">
+                                            <i class="fas fa-file-pdf me-1"></i>
+                                            {{ file.split('_', 1)[1] if '_' in file else file }}
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Дополнительная информация -->
+                    {% if application.courses %}
+                        <div class="mb-3">
+                            <strong>Курсы повышения квалификации:</strong>
+                            <div class="ms-3 p-3 bg-light rounded">{{ application.courses | nl2br | safe }}</div>
+                            
+                            {% if application.course_certificates %}
+                                <div class="mt-2">
+                                    <strong>Сертификаты курсов:</strong>
+                                    <div class="mt-2">
+                                        {% for file in application.course_certificates | from_json %}
+                                            <a href="{{ url_for('download_document', filename='certificates/' + file) }}" 
+                                               class="btn btn-sm btn-outline-danger me-2 mb-2">
+                                                <i class="fas fa-file-pdf me-1"></i>
+                                                {{ file.split('_', 1)[1] if '_' in file else file }}
+                                            </a>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                    {% if application.languages %}
+                        <div class="mb-3">
+                            <strong>Знание языков:</strong>
+                            <div class="ms-3 p-3 bg-light rounded">{{ application.languages | nl2br | safe }}</div>
+                            
+                            {% if application.language_certificates %}
+                                <div class="mt-2">
+                                    <strong>Языковые сертификаты:</strong>
+                                    <div class="mt-2">
+                                        {% for file in application.language_certificates | from_json %}
+                                            <a href="{{ url_for('download_document', filename='languages/' + file) }}" 
+                                               class="btn btn-sm btn-outline-danger me-2 mb-2">
+                                                <i class="fas fa-file-pdf me-1"></i>
+                                                {{ file.split('_', 1)[1] if '_' in file else file }}
+                                            </a>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                    {% if application.awards %}
+                        <div class="mb-3">
+                            <strong>Награды и достижения:</strong>
+                            <div class="ms-3 p-3 bg-light rounded">{{ application.awards | nl2br | safe }}</div>
+                            
+                            {% if application.award_documents %}
+                                <div class="mt-2">
+                                    <strong>Документы о наградах:</strong>
+                                    <div class="mt-2">
+                                        {% for file in application.award_documents | from_json %}
+                                            <a href="{{ url_for('download_document', filename='awards/' + file) }}" 
+                                               class="btn btn-sm btn-outline-danger me-2 mb-2">
+                                                <i class="fas fa-file-pdf me-1"></i>
+                                                {{ file.split('_', 1)[1] if '_' in file else file }}
+                                            </a>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Решения по этапам -->
+        {% if application.hr_decision %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clipboard-list me-2"></i>
+                        История решений
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if application.hr_decision %}
+                        <div class="border rounded p-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <i class="fas fa-user-tie me-2"></i>
+                                        Решение HR
+                                    </h6>
+                                    <span class="badge {{ 'bg-success' if application.hr_decision == 'approve' else 'bg-danger' if application.hr_decision == 'reject' else 'bg-warning' }}">
+                                        {{ {'approve': 'Одобрено', 'reject': 'Отклонено', 'revise': 'На доработку'}[application.hr_decision] }}
+                                    </span>
+                                </div>
+                                <small class="text-muted">{{ format_datetime(application.hr_decision_date) }}</small>
+                </div>
+                            {% if application.hr_notes %}
+                                <div class="mt-2">
+                                    <strong>Комментарий HR:</strong>
+                                    <div class="ms-3">{{ application.hr_notes }}</div>
+            </div>
+        {% endif %}
+                        </div>
+                    {% endif %}
+                    
+                    {% if application.dept_decision %}
+                        <div class="border rounded p-3 mb-3 bg-light">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <i class="fas fa-building me-2"></i>
+                                        Мое решение
+                                    </h6>
+                                    <span class="badge {{ 'bg-success' if application.dept_decision == 'recommend' else 'bg-danger' }}">
+                                        {{ {'recommend': 'Рекомендовано', 'reject': 'Отклонено'}[application.dept_decision] }}
+                                    </span>
+                                </div>
+                                <small class="text-muted">{{ format_datetime(application.dept_decision_date) }}</small>
+                            </div>
+                            {% if application.dept_notes %}
+                                <div class="mt-2">
+                                    <strong>Мой комментарий:</strong>
+                                    <div class="ms-3">{{ application.dept_notes }}</div>
+                        </div>
+                    {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+
+    </div>
+
+    <!-- Боковая панель -->
+    <div class="col-lg-4">
+        <!-- Загруженные документы -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-file-pdf me-2 text-danger"></i>
+                    Загруженные документы
+                </h6>
+            </div>
+            <div class="card-body">
+                {% set has_documents = false %}
+                
+                <!-- Дипломы -->
+                {% if application.diploma_files %}
+                    {% set has_documents = true %}
+                    <div class="mb-3">
+                        <h6 class="text-primary">
+                            <i class="fas fa-graduation-cap me-2"></i>
+                            Дипломы
+                        </h6>
+                        <div class="mt-2">
+                            {% for file in application.diploma_files | from_json %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <a href="{{ url_for('download_document', filename='diplomas/' + file) }}" 
+                                       class="btn btn-sm btn-outline-danger me-2 flex-grow-1 text-start">
+                                        <i class="fas fa-file-pdf me-1"></i>
+                                        {{ file.split('_', 1)[1] if '_' in file else file }}
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Документы об ученой степени -->
+                {% if application.degree_files %}
+                    {% set has_documents = true %}
+                    <div class="mb-3">
+                        <h6 class="text-success">
+                            <i class="fas fa-medal me-2"></i>
+                            Ученая степень
+                        </h6>
+                        <div class="mt-2">
+                            {% for file in application.degree_files | from_json %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <a href="{{ url_for('download_document', filename='degrees/' + file) }}" 
+                                       class="btn btn-sm btn-outline-danger me-2 flex-grow-1 text-start">
+                                        <i class="fas fa-file-pdf me-1"></i>
+                                        {{ file.split('_', 1)[1] if '_' in file else file }}
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Сертификаты курсов -->
+                {% if application.course_certificates %}
+                    {% set has_documents = true %}
+                    <div class="mb-3">
+                        <h6 class="text-info">
+                            <i class="fas fa-certificate me-2"></i>
+                            Курсы ПК
+                        </h6>
+                        <div class="mt-2">
+                            {% for file in application.course_certificates | from_json %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <a href="{{ url_for('download_document', filename='certificates/' + file) }}" 
+                                       class="btn btn-sm btn-outline-danger me-2 flex-grow-1 text-start">
+                                        <i class="fas fa-file-pdf me-1"></i>
+                                        {{ file.split('_', 1)[1] if '_' in file else file }}
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Языковые сертификаты -->
+                {% if application.language_certificates %}
+                    {% set has_documents = true %}
+                    <div class="mb-3">
+                        <h6 class="text-warning">
+                            <i class="fas fa-language me-2"></i>
+                            Языки
+                        </h6>
+                        <div class="mt-2">
+                            {% for file in application.language_certificates | from_json %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <a href="{{ url_for('download_document', filename='languages/' + file) }}" 
+                                       class="btn btn-sm btn-outline-danger me-2 flex-grow-1 text-start">
+                                        <i class="fas fa-file-pdf me-1"></i>
+                                        {{ file.split('_', 1)[1] if '_' in file else file }}
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Документы о наградах -->
+                {% if application.award_documents %}
+                    {% set has_documents = true %}
+                    <div class="mb-3">
+                        <h6 class="text-danger">
+                            <i class="fas fa-trophy me-2"></i>
+                            Награды
+                        </h6>
+                        <div class="mt-2">
+                            {% for file in application.award_documents | from_json %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <a href="{{ url_for('download_document', filename='awards/' + file) }}" 
+                                       class="btn btn-sm btn-outline-danger me-2 flex-grow-1 text-start">
+                                        <i class="fas fa-file-pdf me-1"></i>
+                                        {{ file.split('_', 1)[1] if '_' in file else file }}
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if not has_documents %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-file-alt fa-3x mb-2 d-block"></i>
+                        <small>Документы не загружены</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Результаты тестов -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-clipboard-check me-2"></i>
+                        Результаты тестов
+                    </h6>
+                </div>
+                <div class="card-body">
+                {% if application.vacancy.required_tests %}
+                    {% for test in application.vacancy.required_tests %}
+                        {% set test_result = test_results.get(test.id) %}
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3 p-3 border rounded">
+                            <div>
+                                <strong>{{ test.name }}</strong><br>
+                                <small class="text-muted">{{ test.type.upper() if test.type != 'custom' else 'ПОЛЬЗОВАТЕЛЬСКИЙ' }}</small>
+                            </div>
+                            <div class="text-end">
+                                {% if test_result %}
+                                    <div class="mb-1">
+                                        <span class="badge {{ 'bg-success' if test_result.score >= (test_result.max_score * 0.7) else 'bg-warning' if test_result.score >= (test_result.max_score * 0.5) else 'bg-danger' }}">
+                                            {{ test_result.score }}/{{ test_result.max_score }}
+                                </span>
+                                    </div>
+                                    <small class="text-muted">{{ format_datetime(test_result.completed_at) }}</small>
+                            {% else %}
+                                <span class="badge bg-warning">Не пройден</span>
+                            {% endif %}
+                        </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Тесты не требуются для этой вакансии
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        <!-- Аналитика кандидата -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Аналитика кандидата
+                    </h6>
+                </div>
+                <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Научная активность:</span>
+                        {% set total_score = (application.publications_count or 0) + (application.projects_count or 0) + (application.h_index or 0) %}
+                        <span class="badge {{ 'bg-success' if total_score > 10 else 'bg-warning' if total_score > 5 else 'bg-secondary' }}">
+                            {{ 'Высокая' if total_score > 10 else 'Средняя' if total_score > 5 else 'Базовая' }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Соответствие вакансии:</span>
+                        {% set match_score = 0 %}
+                        {% if application.academic_degree %}{% set match_score = match_score + 20 %}{% endif %}
+                        {% if application.work_experience %}{% set match_score = match_score + 30 %}{% endif %}
+                        {% if application.key_publications %}{% set match_score = match_score + 25 %}{% endif %}
+                        {% if application.awards %}{% set match_score = match_score + 15 %}{% endif %}
+                        {% if application.languages %}{% set match_score = match_score + 10 %}{% endif %}
+                        
+                        <span class="badge {{ 'bg-success' if match_score >= 80 else 'bg-warning' if match_score >= 60 else 'bg-danger' }}">
+                            {{ match_score }}%
+                        </span>
+                    </div>
+                </div>
+                    
+                {% if application.vacancy.required_tests %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span>Результаты тестов:</span>
+                            {% set total_tests = application.vacancy.required_tests | length %}
+                            {% set passed_tests = 0 %}
+                            {% for test in application.vacancy.required_tests %}
+                                {% if test_results.get(test.id) %}
+                                    {% set passed_tests = passed_tests + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                            <span class="badge {{ 'bg-success' if passed_tests == total_tests else 'bg-warning' if passed_tests > 0 else 'bg-danger' }}">
+                                {{ passed_tests }}/{{ total_tests }}
+                            </span>
+                        </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        <!-- Принятие решения департамента -->
+        {% if application.status == 'dept_review' and not application.dept_decision %}
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-gavel me-2"></i>
+                        Принятие решения
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Внимание:</strong> Ваше решение повлияет на дальнейший ход рассмотрения заявки.
+                    </div>
+                    
+                    <form method="POST" action="{{ url_for('dept_make_decision', app_id=application.id) }}">
+                        <div class="mb-3">
+                            <label for="dept_notes" class="form-label">
+                                Обоснование решения <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control" id="dept_notes" name="dept_notes" rows="4" 
+                                      required
+                                      minlength="10"
+                                      placeholder="Обязательно укажите обоснование вашего решения (минимум 10 символов)"></textarea>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Комментарий обязателен и будет передан HR для дальнейшей работы
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Рекомендации для HR (при одобрении):</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="priority_interview">
+                                <label class="form-check-label" for="priority_interview">
+                                    Приоритетное интервью
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="extended_interview">
+                                <label class="form-check-label" for="extended_interview">
+                                    Расширенное интервью (90 мин)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="additional_experts">
+                                <label class="form-check-label" for="additional_experts">
+                                    Привлечь дополнительных экспертов
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" name="decision" value="recommend" class="btn btn-success">
+                                <i class="fas fa-thumbs-up me-2"></i>
+                                Рекомендовать к трудоустройству
+                            </button>
+                            <button type="submit" name="decision" value="reject" class="btn btn-danger">
+                                <i class="fas fa-thumbs-down me-2"></i>
+                                Отклонить заявку
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <!-- Статус рассмотрения -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Статус рассмотрения
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if application.dept_decision %}
+                        <div class="alert alert-{{ 'success' if application.dept_decision == 'recommend' else 'danger' }}">
+                            <strong>Решение принято:</strong> 
+                            {{ 'Рекомендовано к трудоустройству' if application.dept_decision == 'recommend' else 'Отклонено' }}
+                        </div>
+                    {% elif application.status != 'dept_review' %}
+                        <div class="alert alert-info">
+                            {% if application.status == 'pending' %}
+                                <strong>Ожидание:</strong> Кандидат проходит тесты
+                            {% elif application.status == 'hr_review' %}
+                                <strong>Ожидание:</strong> Рассмотрение HR
+                            {% elif application.status == 'interview_scheduled' %}
+                                <strong>Статус:</strong> Интервью назначено
+                            {% elif application.status == 'voting' %}
+                                <strong>Статус:</strong> Идет голосование комиссии
+                            {% elif application.status in ['approved', 'rejected'] %}
+                                <strong>Завершено:</strong> Принято финальное решение
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+/* Горизонтальный Timeline */
+.horizontal-timeline {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    position: relative;
+    padding: 20px 0;
+    overflow-x: auto;
+}
+
+.horizontal-timeline::before {
+    content: '';
+    position: absolute;
+    top: 35px;
+    left: 50px;
+    right: 50px;
+    height: 2px;
+    background: #dee2e6;
+    z-index: 1;
+}
+
+.timeline-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    min-width: 100px;
+}
+
+.step-marker {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 3px #dee2e6;
+    margin-bottom: 10px;
+}
+
+.step-content {
+    text-align: center;
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    min-height: 60px;
+    width: 100%;
+}
+
+.timeline-step.completed .step-content {
+    border-color: #28a745;
+    background: #d4edda;
+}
+
+.timeline-step.in-progress .step-content {
+    border-color: #ffc107;
+    background: #fff3cd;
+}
+
+.timeline-step.pending .step-content {
+    border-color: #6c757d;
+    background: #f8f9fa;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .horizontal-timeline {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .horizontal-timeline::before {
+        top: 0;
+        left: 20px;
+        right: auto;
+        bottom: 0;
+        width: 2px;
+        height: auto;
+    }
+    
+    .timeline-step {
+        flex-direction: row;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .step-marker {
+        margin-right: 15px;
+        margin-bottom: 0;
+    }
+    
+    .step-content {
+        text-align: left;
+    }
+}
+</style>
+{% endblock %} 

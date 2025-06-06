@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация кандидата - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white text-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-user-plus me-2"></i>
+                    Регистрация кандидата
+                </h4>
+                <small>Создание аккаунта для подачи заявок на вакансии</small>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="last_name" class="form-label">
+                                <i class="fas fa-user me-1"></i>
+                                Фамилия <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="last_name" name="last_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="first_name" class="form-label">
+                                <i class="fas fa-user me-1"></i>
+                                Имя <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="first_name" name="first_name" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="middle_name" class="form-label">
+                            <i class="fas fa-user me-1"></i>
+                            Отчество
+                        </label>
+                        <input type="text" class="form-control" id="middle_name" name="middle_name">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">
+                            <i class="fas fa-envelope me-1"></i>
+                            Email <span class="text-danger">*</span>
+                        </label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                        <div class="form-text">
+                            Будет использоваться для входа в систему и получения уведомлений
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock me-1"></i>
+                            Пароль <span class="text-danger">*</span>
+                        </label>
+                        <input type="password" class="form-control" id="password" name="password" 
+                               minlength="6" required>
+                        <div class="form-text">
+                            Минимум 6 символов
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">
+                            <i class="fas fa-lock me-1"></i>
+                            Подтвердите пароль <span class="text-danger">*</span>
+                        </label>
+                        <input type="password" class="form-control" id="confirm_password" 
+                               name="confirm_password" required>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="terms" required>
+                        <label class="form-check-label" for="terms">
+                            Я согласен(а) с 
+                            <a href="#" class="text-primary">условиями использования</a> 
+                            и 
+                            <a href="#" class="text-primary">политикой конфиденциальности</a>
+                            <span class="text-danger">*</span>
+                        </label>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-user-plus me-2"></i>
+                            Зарегистрироваться
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                <p class="mb-0">
+                    Уже есть аккаунт? 
+                    <a href="{{ url_for('login') }}" class="text-primary">
+                        Войти в систему
+                    </a>
+                </p>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <div class="alert alert-info">
+                <h6><i class="fas fa-info-circle me-2"></i>Информация для кандидатов</h6>
+                <ul class="mb-0">
+                    <li>После регистрации вы сможете подавать заявки на открытые вакансии</li>
+                    <li>Для каждой вакансии может потребоваться прохождение тестов IQ/EQ</li>
+                    <li>Все ваши заявки будут отслеживаться в личном кабинете</li>
+                    <li>Вы получите уведомления о статусе рассмотрения заявок</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const password = document.getElementById('password');
+    const confirmPassword = document.getElementById('confirm_password');
+    
+    function validatePassword() {
+        if (password.value !== confirmPassword.value) {
+            confirmPassword.setCustomValidity('Пароли не совпадают');
+        } else {
+            confirmPassword.setCustomValidity('');
+        }
+    }
+    
+    password.addEventListener('change', validatePassword);
+    confirmPassword.addEventListener('keyup', validatePassword);
+});
+</script>
+{% endblock %} 

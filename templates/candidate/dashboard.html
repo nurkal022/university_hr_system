@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Мои заявки - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-tachometer-alt me-2"></i>
+        Панель кандидата
+    </h1>
+    <div>
+        {% if available_vacancies %}
+            <span class="badge bg-info">{{ available_vacancies|length }}</span>
+            доступных вакансий
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <!-- Мои заявки -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-alt me-2"></i>
+                    Мои заявки
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if applications %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Вакансия</th>
+                                    <th>Департамент</th>
+                                    <th>Статус</th>
+                                    <th>Дата подачи</th>
+                                    <th>Тесты</th>
+                                    <th>Детали</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for app in applications %}
+                                    <tr {{ 'class="table-warning"' if app.status == 'revision_requested' else '' }}>
+                                        <td>
+                                            <strong>{{ app.vacancy.title }}</strong><br>
+                                            <small class="text-muted">{{ app.vacancy.discipline }}</small>
+                                            {% if app.revision_count > 0 %}
+                                                <br><small class="text-warning">
+                                                    <i class="fas fa-edit me-1"></i>
+                                                    Доработка #{{ app.revision_count }}
+                                                </small>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ app.vacancy.department.name }}</td>
+                                        <td>
+                                            <span class="badge {{ get_status_badge_class(app.status) }}">
+                                                {{ APPLICATION_STATUSES[app.status] }}
+                                            </span>
+                                            {% if app.status == 'revision_requested' %}
+                                                <br><small class="text-warning">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                                    Требует внимания!
+                                                </small>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ format_datetime(app.created_at) }}</td>
+                                        <td>
+                                            {% if app.vacancy.required_tests %}
+                                                {% for test in app.vacancy.required_tests %}
+                                                    {% set test_completed = check_all_tests_completed_for_application(app) %}
+                                                    {% if test_completed %}
+                                                        <span class="badge bg-success me-1">{{ test.name }}: Пройден</span>
+                                                {% else %}
+                                                    <a href="{{ url_for('candidate_take_tests', app_id=app.id) }}" 
+                                                           class="badge bg-warning text-decoration-none me-1">{{ test.name }}: Не пройден</a>
+                                                {% endif %}
+                                                {% endfor %}
+                                            
+                                                {% if not check_all_tests_completed_for_application(app) %}
+                                                    <br><small class="text-warning">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                                        Необходимо пройти тесты
+                                                    </small>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge bg-secondary">Тесты не требуются</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if app.status == 'revision_requested' %}
+                                                <a href="{{ url_for('candidate_edit_application', app_id=app.id) }}" 
+                                                   class="btn btn-sm btn-warning mb-1">
+                                                    <i class="fas fa-edit me-1"></i>
+                                                    Доработать
+                                                </a><br>
+                                            {% endif %}
+                                            <a href="{{ url_for('candidate_view_application', app_id=app.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye me-1"></i>
+                                                Детали
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">У вас пока нет заявок</h5>
+                        <p class="text-muted">Подайте заявку на интересующую вакансию</p>
+                        {% if available_vacancies %}
+                            <a href="#available-vacancies" class="btn btn-primary">
+                                <i class="fas fa-search me-2"></i>
+                                Посмотреть вакансии
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Доступные вакансии -->
+{% if available_vacancies %}
+    <div class="mt-5" id="available-vacancies">
+        <h3>
+            <i class="fas fa-briefcase me-2"></i>
+            Доступные вакансии
+        </h3>
+        <div class="row">
+            {% for vacancy in available_vacancies %}
+                <div class="col-lg-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h6 class="mb-0">{{ vacancy.title }}</h6>
+                            <small class="text-muted">{{ vacancy.department.name }}</small>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">
+                                <strong>Дисциплина:</strong> {{ vacancy.discipline }}<br>
+                                <strong>Тип:</strong> {{ EMPLOYMENT_TYPES[vacancy.employment_type] }}<br>
+                                <strong>Формат:</strong> {{ WORK_FORMATS[vacancy.work_format] }}
+                            </p>
+                            
+                            <div class="mb-2">
+                                {% if vacancy.required_tests %}
+                                    {% for test in vacancy.required_tests %}
+                                        <span class="badge bg-info me-1">{{ test.name }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="badge bg-secondary">Тесты не требуются</span>
+                                {% endif %}
+                            </div>
+                            
+                            <small class="text-muted">
+                                До {{ format_datetime(vacancy.application_end, '%d.%m.%Y') }}
+                            </small>
+                        </div>
+                        <div class="card-footer">
+                            <a href="{{ url_for('candidate_apply', vacancy_id=vacancy.id) }}" 
+                               class="btn btn-primary btn-sm">
+                                <i class="fas fa-paper-plane me-1"></i>
+                                Подать заявку
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

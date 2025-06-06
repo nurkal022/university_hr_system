@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Управление пользователями - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-users me-2"></i>
+        Управление пользователями
+    </h1>
+    <a href="{{ url_for('admin_create_user') }}" class="btn btn-primary">
+        <i class="fas fa-user-plus me-2"></i>
+        Создать пользователя
+    </a>
+</div>
+
+{% if users %}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Все пользователи системы</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Пользователь</th>
+                            <th>Email</th>
+                            <th>Роль</th>
+                            <th>Департамент</th>
+                            <th>Дата регистрации</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                            <tr>
+                                <td>{{ user.id }}</td>
+                                <td>
+                                    <i class="fas fa-user me-2"></i>
+                                    {{ user.full_name }}
+                                </td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    <span class="badge bg-secondary">
+                                        {{ USER_ROLES[user.role] }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if user.department %}
+                                        {{ user.department.name }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ format_datetime(user.created_at) }}</td>
+                                <td>
+                                    {% if user.is_active %}
+                                        <span class="badge bg-success">Активен</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Неактивен</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('admin_edit_user', user_id=user.id) }}" 
+                                           class="btn btn-outline-primary"
+                                           title="Редактировать пользователя">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% if user.id != current_user.id %}
+                                            <form style="display: inline-block;" method="POST" 
+                                                  action="{{ url_for('admin_toggle_user', user_id=user.id) }}"
+                                                  title="{{ 'Деактивировать' if user.is_active else 'Активировать' }} пользователя">
+                                                <button type="submit" 
+                                                        class="btn btn-outline-{{ 'warning' if user.is_active else 'success' }}">
+                                                    <i class="fas fa-{{ 'user-slash' if user.is_active else 'user-check' }}"></i>
+                                            </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">Пользователей пока нет</h4>
+        <p class="text-muted">Создайте первого пользователя</p>
+        <a href="{{ url_for('admin_create_user') }}" class="btn btn-primary">
+            <i class="fas fa-user-plus me-2"></i>
+            Создать пользователя
+        </a>
+    </div>
+{% endif %}
+{% endblock %} 

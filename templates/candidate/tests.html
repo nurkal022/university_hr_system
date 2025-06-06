@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Прохождение тестов - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-clipboard-check me-2"></i>
+                    Прохождение тестов
+                </h4>
+                <small class="text-muted">Вакансия: {{ application.vacancy.title }}</small>
+            </div>
+            <div class="card-body">
+                {% if tests_to_take %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Для продолжения рассмотрения вашей заявки необходимо пройти все указанные тесты.
+                    </div>
+
+                    <!-- Тесты для прохождения -->
+                    <h5 class="mb-3">Обязательные тесты</h5>
+                    <div class="row">
+                        {% for test in tests_to_take %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <div class="mb-3">
+                                            <i class="fas fa-clipboard-list fa-2x text-primary"></i>
+                                        </div>
+                                        <h6 class="card-title">{{ test.name }}</h6>
+                                        <p class="card-text">
+                                            <span class="badge {{ 'bg-info' if test.type == 'iq' else 'bg-success' if test.type == 'eq' else 'bg-secondary' }}">
+                                                {{ test.type.upper() if test.type != 'custom' else 'ПОЛЬЗОВАТЕЛЬСКИЙ' }}
+                                            </span>
+                                        </p>
+                                        <p class="small text-muted">
+                                            {% set questions_count = (test.questions | from_json | length) %}
+                                            {{ questions_count }} вопросов
+                                        </p>
+                                        <a href="{{ url_for('candidate_take_test', app_id=application.id, test_id=test.id) }}" 
+                                           class="btn btn-primary">
+                                            <i class="fas fa-play me-2"></i>
+                                            Начать тест
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="alert alert-warning mt-4">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Важно:</strong> После прохождения всех тестов ваша заявка будет автоматически отправлена на рассмотрение HR специалисту.
+                    </div>
+                    
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h4 class="text-success">Все тесты пройдены!</h4>
+                        <p class="text-muted">Ваша заявка отправлена на рассмотрение HR специалисту.</p>
+                        <a href="{{ url_for('candidate_dashboard') }}" class="btn btn-primary">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Вернуться к заявкам
+                        </a>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+        
+        <!-- Информация о тестах -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Информация о тестировании
+                </h5>
+                            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Рекомендации для прохождения:</h6>
+                        <ul class="small">
+                            <li>Внимательно читайте каждый вопрос</li>
+                            <li>Отвечайте честно и обдуманно</li>
+                            <li>Не торопитесь, время не ограничено</li>
+                            <li>Если сомневаетесь, выбирайте наиболее подходящий вариант</li>
+                        </ul>
+                        </div>
+                    <div class="col-md-6">
+                        <h6>Технические требования:</h6>
+                        <ul class="small">
+                            <li>Стабильное интернет-соединение</li>
+                            <li>Современный браузер</li>
+                            <li>Не закрывайте страницу во время теста</li>
+                            <li>Результаты сохраняются автоматически</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

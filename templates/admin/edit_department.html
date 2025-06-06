@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Редактировать департамент - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>
+                    Редактирование департамента
+                </h4>
+                <small class="text-muted">{{ department.name }}</small>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">
+                            Название департамента <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="name" name="name" required
+                               value="{{ department.name }}"
+                               placeholder="Например: Кафедра Информационных Технологий">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="head_id" class="form-label">Глава департамента</label>
+                        <select class="form-select" id="head_id" name="head_id">
+                            <option value="">Выберите главу департамента</option>
+                            {% for user in potential_heads %}
+                                <option value="{{ user.id }}" {% if user.id == department.head_id %}selected{% endif %}>
+                                    {{ user.full_name }} ({{ user.email }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            Выберите пользователя с ролью "Глава департамента" из списка
+                        </div>
+                    </div>
+                    
+                    <!-- Информация о департаменте -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Информация о департаменте
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Сотрудники:</strong><br>
+                                    <span class="badge bg-primary fs-6">{{ users_count }}</span>
+                                    пользователей<br>
+                                    
+                                    {% if users_count > 0 %}
+                                        <small class="text-muted mt-1 d-block">
+                                            {% for user in department.users[:3] %}
+                                                {{ user.full_name }}{% if not loop.last %}, {% endif %}
+                                            {% endfor %}
+                                            {% if users_count > 3 %}
+                                                и еще {{ users_count - 3 }}...
+                                            {% endif %}
+                                        </small>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Вакансии:</strong><br>
+                                    <span class="badge bg-info fs-6">{{ vacancies_count }}</span>
+                                    вакансий<br>
+                                    
+                                    {% if vacancies_count > 0 %}
+                                        <small class="text-muted mt-1 d-block">
+                                            {% for vacancy in department.vacancies[:3] %}
+                                                {{ vacancy.title }}{% if not loop.last %}, {% endif %}
+                                            {% endfor %}
+                                            {% if vacancies_count > 3 %}
+                                                и еще {{ vacancies_count - 3 }}...
+                                            {% endif %}
+                                        </small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    Создан {{ format_datetime(department.created_at) }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if not potential_heads %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Внимание!</strong> Нет пользователей с ролью "Глава департамента". 
+                            <a href="{{ url_for('admin_create_user') }}" class="alert-link">Создайте пользователя</a> 
+                            с соответствующей ролью.
+                        </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <a href="{{ url_for('admin_departments') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                Назад к списку
+                            </a>
+                            
+                            {% if users_count == 0 and vacancies_count == 0 %}
+                                <form style="display: inline-block;" method="POST" 
+                                      action="{{ url_for('admin_delete_department', dept_id=department.id) }}"
+                                      onsubmit="return confirm('Вы уверены, что хотите удалить департамент &quot;{{ department.name }}&quot;? Это действие нельзя отменить.')">
+                                    <button type="submit" class="btn btn-outline-danger ms-2">
+                                        <i class="fas fa-trash me-2"></i>
+                                        Удалить департамент
+                                    </button>
+                                </form>
+                            {% else %}
+                                <button class="btn btn-outline-danger ms-2" disabled 
+                                        title="Нельзя удалить департамент с сотрудниками или вакансиями">
+                                    <i class="fas fa-trash me-2"></i>
+                                    Удалить департамент
+                                </button>
+                            {% endif %}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            Сохранить изменения
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

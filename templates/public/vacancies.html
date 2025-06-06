@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}Вакансии - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3">
+                <i class="fas fa-briefcase me-2"></i>
+                Открытые вакансии
+            </h1>
+            {% if not current_user.is_authenticated %}
+                <div>
+                    <a href="{{ url_for('register') }}" class="btn btn-primary me-2">
+                        <i class="fas fa-user-plus me-2"></i>
+                        Зарегистрироваться
+                    </a>
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-sign-in-alt me-2"></i>
+                        Войти
+                    </a>
+                </div>
+            {% elif current_user.role == 'candidate' %}
+                <a href="{{ url_for('candidate_dashboard') }}" class="btn btn-primary">
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    Моя панель
+                </a>
+            {% endif %}
+        </div>
+
+        <!-- Фильтры -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="department" class="form-label">Департамент</label>
+                        <select class="form-select" id="department" name="department">
+                            <option value="">Все департаменты</option>
+                            {% for dept in departments %}
+                                <option value="{{ dept.id }}" 
+                                        {% if selected_department == dept.id|string %}selected{% endif %}>
+                                    {{ dept.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="position_rank" class="form-label">Должность</label>
+                        <select class="form-select" id="position_rank" name="position_rank">
+                            <option value="">Выберите должность</option>
+                            <option value="Преподаватель" {% if selected_position == 'Преподаватель' %}selected{% endif %}>Преподаватель</option>
+                            <option value="Старший преподаватель" {% if selected_position == 'Старший преподаватель' %}selected{% endif %}>Старший преподаватель</option>
+                            <option value="Профессор-практик" {% if selected_position == 'Профессор-практик' %}selected{% endif %}>Профессор-практик</option>
+                            <option value="Ассоциированный профессор" {% if selected_position == 'Ассоциированный профессор' %}selected{% endif %}>Ассоциированный профессор</option>
+                            <option value="Профессор" {% if selected_position == 'Профессор' %}selected{% endif %}>Профессор</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="education_level" class="form-label">Образование</label>
+                        <select class="form-select" id="education_level" name="education_level">
+                            <option value="">Выберите уровень</option>
+                            {% for key, value in EDUCATION_LEVELS.items() %}
+                                <option value="{{ key }}" 
+                                        {% if selected_education == key %}selected{% endif %}>
+                                    {{ value }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="employment_type" class="form-label">Занятость</label>
+                        <select class="form-select" id="employment_type" name="employment_type">
+                            <option value="">Выберите тип</option>
+                            {% for key, value in EMPLOYMENT_TYPES.items() %}
+                                <option value="{{ key }}" 
+                                        {% if selected_employment == key %}selected{% endif %}>
+                                    {{ value }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-outline-primary me-2">
+                            <i class="fas fa-filter me-2"></i>
+                            Применить
+                        </button>
+                        <a href="{{ url_for('public_vacancies') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>
+                            Сбросить
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Список вакансий -->
+        {% if vacancies.items %}
+            <div class="row">
+                {% for vacancy in vacancies.items %}
+                    <div class="col-lg-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h5 class="card-title">{{ vacancy.title }}</h5>
+                                    <small class="text-muted">
+                                        {{ format_date(vacancy.created_at) }}
+                                    </small>
+                                </div>
+                                
+                                <h6 class="card-subtitle mb-2 text-muted">
+                                    <i class="fas fa-building me-2"></i>
+                                    {{ vacancy.department.name }}
+                                </h6>
+                                
+                                <p class="card-text">
+                                    {% if vacancy.position_rank %}
+                                        <strong>Должность:</strong> {{ vacancy.position_rank }}<br>
+                                    {% endif %}
+                                    <strong>Дисциплина:</strong> {{ vacancy.discipline }}<br>
+                                    <strong>Образование:</strong> {{ EDUCATION_LEVELS[vacancy.education_level] }}<br>
+                                    <strong>Занятость:</strong> {{ EMPLOYMENT_TYPES[vacancy.employment_type] }}
+                                    {% if vacancy.salary %}
+                                        <br><strong>Зарплата:</strong> {{ vacancy.salary }}
+                                    {% endif %}
+                                </p>
+                                
+                                {% if vacancy.description %}
+                                    <p class="card-text text-muted">
+                                        {{ vacancy.description[:150] }}{% if vacancy.description|length > 150 %}...{% endif %}
+                                    </p>
+                                {% endif %}
+                                
+                                <div class="row text-center mt-3">
+                                    <div class="col-4">
+                                        <small class="text-muted">Опыт</small><br>
+                                        <strong>{{ vacancy.min_experience }}+ лет</strong>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted">Формат</small><br>
+                                        <strong>{{ WORK_FORMATS[vacancy.work_format] }}</strong>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted">Тестов</small><br>
+                                        <strong>{{ vacancy.required_tests | list | length }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        до {{ format_date(vacancy.application_end) }}
+                                    </small>
+                                    <a href="{{ url_for('public_vacancy_detail', vacancy_id=vacancy.id) }}" 
+                                       class="btn btn-primary btn-sm">
+                                        <i class="fas fa-eye me-2"></i>
+                                        Подробнее
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- Пагинация -->
+            {% if vacancies.pages > 1 %}
+                <nav aria-label="Пагинация вакансий">
+                    <ul class="pagination justify-content-center">
+                        {% if vacancies.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" 
+                                   href="{{ url_for('public_vacancies', page=vacancies.prev_num, 
+                                                   department=selected_department,
+                                                   position_rank=selected_position,
+                                                   education_level=selected_education,
+                                                   employment_type=selected_employment) }}">
+                                    Предыдущая
+                                </a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for page_num in vacancies.iter_pages() %}
+                            {% if page_num %}
+                                {% if page_num != vacancies.page %}
+                                    <li class="page-item">
+                                        <a class="page-link" 
+                                           href="{{ url_for('public_vacancies', page=page_num,
+                                                           department=selected_department,
+                                                           position_rank=selected_position,
+                                                           education_level=selected_education,
+                                                           employment_type=selected_employment) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">…</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if vacancies.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" 
+                                   href="{{ url_for('public_vacancies', page=vacancies.next_num,
+                                                   department=selected_department,
+                                                   position_rank=selected_position,
+                                                   education_level=selected_education,
+                                                   employment_type=selected_employment) }}">
+                                    Следующая
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                <h4>Вакансии не найдены</h4>
+                <p class="text-muted">
+                    Попробуйте изменить параметры поиска или 
+                    <a href="{{ url_for('public_vacancies') }}">сбросить фильтры</a>
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

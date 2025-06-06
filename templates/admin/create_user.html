@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Создать пользователя - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-user-plus me-2"></i>
+                    Создание нового пользователя
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="last_name" class="form-label">
+                                Фамилия <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="last_name" name="last_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="first_name" class="form-label">
+                                Имя <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="first_name" name="first_name" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="middle_name" class="form-label">Отчество</label>
+                        <input type="text" class="form-control" id="middle_name" name="middle_name">
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">
+                                Email <span class="text-danger">*</span>
+                            </label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="password" class="form-label">
+                                Пароль <span class="text-danger">*</span>
+                            </label>
+                            <input type="password" class="form-control" id="password" name="password" 
+                                   minlength="6" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="role" class="form-label">
+                                Роль <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="role" name="role" required>
+                                <option value="">Выберите роль</option>
+                                {% for role_key, role_name in USER_ROLES.items() %}
+                                    <option value="{{ role_key }}">{{ role_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="department_id" class="form-label">
+                                Департамент
+                                <span id="dept-required-indicator" class="text-danger" style="display: none;">*</span>
+                            </label>
+                            <select class="form-select" id="department_id" name="department_id">
+                                <option value="">Выберите департамент</option>
+                                {% for department in departments %}
+                                    <option value="{{ department.id }}" 
+                                            data-head="{{ department.head.full_name if department.head else '' }}"
+                                            data-head-id="{{ department.head_id if department.head_id else '' }}">
+                                        {{ department.name }}
+                                        {% if department.head %}
+                                            (глава: {{ department.head.full_name }})
+                                        {% else %}
+                                            (без главы)
+                                        {% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text" id="dept-help-text">
+                                Выберите департамент из списка созданных в панели управления департаментами
+                            </div>
+                            <div id="dept-warning" class="alert alert-warning mt-2" style="display: none;">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Внимание!</strong> У этого департамента уже есть глава: <span id="current-head"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="role-info" class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>Информация о ролях</h6>
+                        <ul class="mb-0 small">
+                            <li><strong>Администратор:</strong> Полный доступ к системе, управление пользователями и департаментами</li>
+                            <li><strong>HR специалист:</strong> Создание вакансий, управление заявками, создание тестов</li>
+                            <li><strong>Глава департамента:</strong> Промежуточное рассмотрение заявок для своего департамента</li>
+                            <li><strong>Кандидат:</strong> Подача заявок на вакансии, прохождение тестов</li>
+                        </ul>
+                    </div>
+
+                    <div id="dept-head-info" class="alert alert-warning" style="display: none;">
+                        <h6><i class="fas fa-building me-2"></i>Важно для главы департамента</h6>
+                        <ul class="mb-0 small">
+                            <li>Глава департамента должен быть привязан к конкретному департаменту</li>
+                            <li>У одного департамента может быть только один глава</li>
+                            <li>Если у департамента уже есть глава, он будет заменен на нового</li>
+                            <li>Создайте департамент в панели управления, если его еще нет</li>
+                        </ul>
+                    </div>
+                    
+                    {% if not departments %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Внимание!</strong> Нет созданных департаментов. 
+                            <a href="{{ url_for('admin_create_department') }}" class="alert-link">Создайте департамент</a> 
+                            для назначения главы департамента.
+                        </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin_users') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Назад к списку
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            Создать пользователя
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const roleSelect = document.getElementById('role');
+    const departmentSelect = document.getElementById('department_id');
+    const deptRequiredIndicator = document.getElementById('dept-required-indicator');
+    const deptHelpText = document.getElementById('dept-help-text');
+    const deptWarning = document.getElementById('dept-warning');
+    const currentHeadSpan = document.getElementById('current-head');
+    const deptHeadInfo = document.getElementById('dept-head-info');
+    
+    // Обработчик изменения роли
+    roleSelect.addEventListener('change', function() {
+        if (this.value === 'department_head') {
+            // Роль "Глава департамента" выбрана
+            departmentSelect.required = true;
+            deptRequiredIndicator.style.display = 'inline';
+            deptHelpText.innerHTML = '<strong class="text-danger">Обязательно для глав департаментов</strong>';
+            deptHeadInfo.style.display = 'block';
+            
+            // Проверяем текущий выбранный департамент
+            checkDepartmentHead();
+        } else {
+            // Другая роль выбрана
+            departmentSelect.required = false;
+            deptRequiredIndicator.style.display = 'none';
+            deptHelpText.innerHTML = 'Выберите департамент из списка созданных в панели управления департаментами';
+            deptWarning.style.display = 'none';
+            deptHeadInfo.style.display = 'none';
+        }
+    });
+    
+    // Обработчик изменения департамента
+    departmentSelect.addEventListener('change', function() {
+        if (roleSelect.value === 'department_head') {
+            checkDepartmentHead();
+        }
+    });
+    
+    function checkDepartmentHead() {
+        const selectedOption = departmentSelect.options[departmentSelect.selectedIndex];
+        if (selectedOption && selectedOption.value) {
+            const currentHead = selectedOption.getAttribute('data-head');
+            if (currentHead) {
+                currentHeadSpan.textContent = currentHead;
+                deptWarning.style.display = 'block';
+            } else {
+                deptWarning.style.display = 'none';
+        }
+        } else {
+            deptWarning.style.display = 'none';
+        }
+    }
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if test %}
+        {{ test.name }} - Платформа поиска ППС
+    {% else %}
+        {{ test_type.upper() }} тест - Платформа поиска ППС
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-clipboard-check me-2"></i>
+                    {% if test %}
+                        {{ test.name }}
+                    {% else %}
+                        {{ test_type.upper() }} тест
+                    {% endif %}
+                </h4>
+                <small class="text-muted">
+                    Заявка на вакансию: {{ application.vacancy.title }}
+                </small>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-4">
+                    <div class="progress-bar" role="progressbar" style="width: 10%" 
+                         aria-valuenow="1" aria-valuemin="0" aria-valuemax="{{ questions|length }}">
+                    </div>
+                </div>
+
+                <form id="test-form" method="POST" action="{% if test %}{{ url_for('candidate_submit_test_new', app_id=application.id, test_id=test.id) }}{% else %}{{ url_for('candidate_submit_test', app_id=application.id, test_type=test_type) }}{% endif %}">
+                    <div id="questions-container">
+                        {% for question in questions %}
+                            {% set outer_loop = loop %}
+                            <div class="question-slide" data-question="{{ outer_loop.index }}" style="display: {{ 'block' if outer_loop.first else 'none' }}">
+                                <div class="question-content mb-4">
+                                    <h5 class="question-text">{{ question.question }}</h5>
+                                </div>
+                                
+                                <div class="answers">
+                                    {% for option in question.options %}
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="radio" 
+                                                   name="question_{{ outer_loop.index0 }}" id="q{{ outer_loop.index0 }}_option{{ loop.index0 }}" 
+                                                   value="{{ loop.index0 }}" required>
+                                            <label class="form-check-label" for="q{{ outer_loop.index0 }}_option{{ loop.index0 }}">
+                                                {{ option }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" id="prev-btn" class="btn btn-outline-secondary" disabled>
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Предыдущий
+                        </button>
+                        
+                        <div class="btn-group">
+                            {% for question in questions %}
+                                <button type="button" class="btn btn-outline-primary question-nav" 
+                                        data-question="{{ loop.index }}">
+                                    {{ loop.index }}
+                                </button>
+                            {% endfor %}
+                        </div>
+                        
+                        <button type="button" id="next-btn" class="btn btn-primary">
+                            Следующий
+                            <i class="fas fa-arrow-right ms-2"></i>
+                        </button>
+                        
+                        <button type="submit" id="submit-btn" class="btn btn-success" style="display: none;">
+                            <i class="fas fa-check me-2"></i>
+                            Завершить тест
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Завершить тест?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите завершить тест? После отправки ответы нельзя будет изменить.</p>
+                <div id="unanswered-questions" class="alert alert-warning" style="display: none;">
+                    <strong>Внимание!</strong> У вас есть неотвеченные вопросы:
+                    <ul id="unanswered-list"></ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-success" id="confirm-submit">
+                    <i class="fas fa-check me-2"></i>
+                    Завершить тест
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const totalQuestions = {{ questions|length }};
+    let currentQuestion = 1;
+    
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const submitBtn = document.getElementById('submit-btn');
+    const progressBar = document.querySelector('.progress-bar');
+    const questionNavs = document.querySelectorAll('.question-nav');
+    
+    function showQuestion(questionNum) {
+        document.querySelectorAll('.question-slide').forEach(slide => {
+            slide.style.display = 'none';
+        });
+        
+        const currentSlide = document.querySelector(`[data-question="${questionNum}"]`);
+        if (currentSlide) {
+            currentSlide.style.display = 'block';
+        }
+        
+        questionNavs.forEach(nav => nav.classList.remove('active'));
+        const currentNav = document.querySelector(`[data-question="${questionNum}"]`);
+        if (currentNav) {
+            currentNav.classList.add('active');
+        }
+        
+        prevBtn.disabled = questionNum === 1;
+        
+        if (questionNum === totalQuestions) {
+            nextBtn.style.display = 'none';
+            submitBtn.style.display = 'inline-block';
+        } else {
+            nextBtn.style.display = 'inline-block';
+            submitBtn.style.display = 'none';
+        }
+        
+        const progress = (questionNum / totalQuestions) * 100;
+        progressBar.style.width = progress + '%';
+        progressBar.setAttribute('aria-valuenow', questionNum);
+    }
+    
+    showQuestion(1);
+    
+    prevBtn.addEventListener('click', function() {
+        if (currentQuestion > 1) {
+            currentQuestion--;
+            showQuestion(currentQuestion);
+        }
+    });
+    
+    nextBtn.addEventListener('click', function() {
+        if (currentQuestion < totalQuestions) {
+            currentQuestion++;
+            showQuestion(currentQuestion);
+        }
+    });
+    
+    questionNavs.forEach(nav => {
+        nav.addEventListener('click', function() {
+            const questionNum = parseInt(this.getAttribute('data-question'));
+            currentQuestion = questionNum;
+            showQuestion(currentQuestion);
+        });
+    });
+    
+    submitBtn.addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        modal.show();
+    });
+    
+    document.getElementById('confirm-submit').addEventListener('click', function() {
+        document.getElementById('test-form').submit();
+    });
+});
+</script>
+{% endblock %} 

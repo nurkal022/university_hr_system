@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Заявки - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-file-alt me-2"></i>
+        {% if selected_vacancy %}
+            Заявки на вакансию "{{ selected_vacancy.title }}"
+        {% else %}
+        Заявки кандидатов
+        {% endif %}
+    </h1>
+    <div>
+        {% if selected_vacancy %}
+            <a href="{{ url_for('hr_vacancies') }}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-arrow-left me-2"></i>
+                К списку вакансий
+            </a>
+        {% endif %}
+        <a href="{{ url_for('export_applications') }}" class="btn btn-success">
+            <i class="fas fa-file-excel me-2"></i>
+            Экспорт в Excel
+        </a>
+    </div>
+</div>
+
+<!-- Фильтры -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            {% if selected_vacancy_id %}
+                <input type="hidden" name="vacancy_id" value="{{ selected_vacancy_id }}">
+            {% endif %}
+            <div class="col-md-4">
+                <label for="status" class="form-label">Статус</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">Все статусы</option>
+                    {% for key, value in APPLICATION_STATUSES.items() %}
+                        <option value="{{ key }}" {% if selected_status == key %}selected{% endif %}>
+                            {{ value }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="department" class="form-label">Департамент</label>
+                <select class="form-select" id="department" name="department">
+                    <option value="">Все департаменты</option>
+                    {% for dept in departments %}
+                        <option value="{{ dept.id }}" {% if selected_department == dept.id|string %}selected{% endif %}>
+                            {{ dept.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-filter me-1"></i>
+                    Применить
+                </button>
+                <a href="{{ url_for('hr_applications') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>
+                    Сбросить
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Список заявок -->
+{% if applications %}
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Кандидат</th>
+                            <th>Вакансия</th>
+                            <th>Статус</th>
+                            <th>Решение департамента</th>
+                            <th style="width: 80px;">Тесты</th>
+                            <th>Дата подачи</th>
+                            <th>Дата завершения</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for app in applications %}
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong>{{ app.candidate.full_name }}</strong><br>
+                                        <small class="text-muted">{{ app.candidate.email }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        {{ app.vacancy.title }}<br>
+                                        <small class="text-muted">{{ app.vacancy.department.name }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge {{ get_status_badge_class(app.status) }}">
+                                        {{ APPLICATION_STATUSES[app.status] }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    {% if app.dept_decision %}
+                                        {% if app.dept_decision == 'recommend' %}
+                                            <i class="fas fa-check-circle text-success fs-5" title="Рекомендован"></i>
+                                        {% elif app.dept_decision == 'reject' %}
+                                            <i class="fas fa-times-circle text-danger fs-5" title="Отклонен"></i>
+                                        {% endif %}
+                                    {% else %}
+                                        <i class="fas fa-clock text-muted" title="Ожидает решения"></i>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% set test_results = get_test_results_for_application(app) %}
+                                    {% if app.vacancy.required_tests %}
+                                        {% set passed_tests = test_results|length %}
+                                        {% set total_tests = app.vacancy.required_tests|length %}
+                                        {% if passed_tests == total_tests %}
+                                            <span class="badge bg-success" title="Все тесты пройдены">{{ passed_tests }}/{{ total_tests }}</span>
+                                        {% elif passed_tests > 0 %}
+                                            <span class="badge bg-warning" title="Частично пройдены">{{ passed_tests }}/{{ total_tests }}</span>
+                                        {% else %}
+                                            <span class="badge bg-danger" title="Тесты не пройдены">0/{{ total_tests }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted small" title="Тесты не требуются">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ format_datetime(app.created_at) }}</td>
+                                <td>
+                                    {% if app.status in ['approved', 'rejected'] %}
+                                        {% if app.final_decision and app.updated_at %}
+                                            {{ format_datetime(app.updated_at) }}
+                                        {% elif app.dept_decision_date %}
+                                            {{ format_datetime(app.dept_decision_date) }}
+                                        {% elif app.hr_decision_date %}
+                                            {{ format_datetime(app.hr_decision_date) }}
+                                        {% else %}
+                                            <span class="text-muted">—</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">В процессе</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('hr_view_application', app_id=app.id) }}" 
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i>
+                                        Просмотр
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">Заявок не найдено</h4>
+        {% if selected_status or selected_department %}
+            <p class="text-muted">Попробуйте изменить фильтры поиска</p>
+            <a href="{{ url_for('hr_applications') }}" class="btn btn-outline-primary">
+                <i class="fas fa-times me-2"></i>
+                Сбросить фильтры
+            </a>
+        {% else %}
+            <p class="text-muted">Кандидаты еще не подавали заявки на ваши вакансии</p>
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock %} 

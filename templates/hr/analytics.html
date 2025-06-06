@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+
+{% block title %}Аналитика - HR{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-chart-bar me-2"></i>
+        Моя аналитика
+    </h1>
+    <div>
+        <a href="{{ url_for('hr_export_analytics') }}" class="btn btn-success">
+            <i class="fas fa-download me-2"></i>
+            Экспортировать данные
+        </a>
+    </div>
+</div>
+
+<!-- Общие метрики -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-primary text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="small">Мои вакансии</div>
+                        <div class="h3">{{ total_vacancies }}</div>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-briefcase fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-success text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="small">Всего заявок</div>
+                        <div class="h3">{{ total_applications }}</div>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-file-alt fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-info text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="small">Средне заявок на вакансию</div>
+                        <div class="h3">{{ (total_applications / total_vacancies) | round(1) if total_vacancies > 0 else 0 }}</div>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-calculator fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6 mb-3">
+        <div class="card bg-warning text-white h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="small">Конверсия</div>
+                        <div class="h3">{{ ((conversion_stats.approved / conversion_stats.submitted * 100) | round(1)) if conversion_stats.submitted > 0 else 0 }}%</div>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-percentage fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if total_applications > 0 %}
+<div class="row">
+    <!-- Статусы заявок -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    Статусы моих заявок
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="applicationStatusChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Воронка конверсии -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-filter me-2"></i>
+                    Воронка конверсии
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="conversionChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Динамика заявок -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Динамика заявок (последние 30 дней)
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="dailyApplicationsChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Топ кандидатов -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-star me-2"></i>
+                    Лучшие кандидаты
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if top_candidates %}
+                    <div class="list-group list-group-flush">
+                        {% for candidate in top_candidates %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>{{ candidate.first_name }} {{ candidate.last_name }}</strong><br>
+                                        <small class="text-muted">{{ candidate.title }}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-success">{{ candidate.avg_score | round(1) }} балла</span><br>
+                                        <small class="text-muted">{{ candidate.tests_count }} тест(а)</small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Нет результатов тестов
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Статистика тестов -->
+{% if test_stats %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-clipboard-check me-2"></i>
+            Статистика тестов
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for test in test_stats %}
+                <div class="col-lg-4 col-md-6 mb-3">
+                    <div class="card border">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ test.name }}</h6>
+                            <p class="card-text">
+                                <span class="badge bg-secondary">{{ test.type.upper() }}</span>
+                            </p>
+                            
+                            {% if test.avg_score and test.max_score %}
+                                {% set avg_percent = (test.avg_score / test.max_score * 100) %}
+                                <div class="mb-2">
+                                    <small class="text-muted">Средний результат</small>
+                                    <div class="progress">
+                                        <div class="progress-bar {{ 'bg-success' if avg_percent >= 70 else 'bg-warning' if avg_percent >= 50 else 'bg-danger' }}" 
+                                             role="progressbar" style="width: {{ avg_percent }}%">
+                                            {{ avg_percent | round(1) }}%
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">{{ test.avg_score | round(1) }}/{{ test.max_score }} баллов</small>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="text-center">
+                                <span class="badge bg-primary">{{ test.completed or 0 }} прохождений</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<!-- Пустое состояние -->
+<div class="text-center py-5">
+    <i class="fas fa-chart-bar fa-4x text-muted mb-4"></i>
+    <h3 class="text-muted">Нет данных для аналитики</h3>
+    <p class="text-muted">Аналитика появится после создания вакансий и получения заявок</p>
+    <a href="{{ url_for('hr_create_vacancy') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>
+        Создать первую вакансию
+    </a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if total_applications > 0 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Диаграмма статусов заявок
+    const statusData = {
+        labels: [
+            {% for status in application_statuses %}
+                '{{ APPLICATION_STATUSES.get(status.status, status.status) }}',
+            {% endfor %}
+        ],
+        datasets: [{
+            data: [
+                {% for status in application_statuses %}
+                    {{ status.count }},
+                {% endfor %}
+            ],
+            backgroundColor: [
+                '#6c757d', '#17a2b8', '#ffc107', '#007bff', '#17a2b8', '#28a745', '#dc3545'
+            ]
+        }]
+    };
+    
+    new Chart(document.getElementById('applicationStatusChart'), {
+        type: 'pie',
+        data: statusData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    
+    // Воронка конверсии
+    const conversionData = {
+        labels: ['Подано', 'HR', 'Департамент', 'Интервью', 'Голосование', 'Одобрено'],
+        datasets: [{
+            label: 'Количество',
+            data: [
+                {{ conversion_stats.submitted }},
+                {{ conversion_stats.hr_reviewed }},
+                {{ conversion_stats.dept_reviewed }},
+                {{ conversion_stats.interviewed }},
+                {{ conversion_stats.voted }},
+                {{ conversion_stats.approved }}
+            ],
+            backgroundColor: [
+                '#007bff', '#28a745', '#ffc107', '#17a2b8', '#6f42c1', '#20c997'
+            ]
+        }]
+    };
+    
+    new Chart(document.getElementById('conversionChart'), {
+        type: 'bar',
+        data: conversionData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+    
+    // Динамика заявок
+    const dailyData = {
+        labels: [
+            {% for day in daily_applications %}
+                '{{ day.date.strftime("%d.%m") }}',
+            {% endfor %}
+        ],
+        datasets: [{
+            label: 'Заявки',
+            data: [
+                {% for day in daily_applications %}
+                    {{ day.count }},
+                {% endfor %}
+            ],
+            borderColor: '#28a745',
+            backgroundColor: 'rgba(40, 167, 69, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    };
+    
+    new Chart(document.getElementById('dailyApplicationsChart'), {
+        type: 'line',
+        data: dailyData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %} 

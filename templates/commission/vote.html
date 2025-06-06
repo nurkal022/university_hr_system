@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+
+{% block title %}Голосование комиссии - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-vote-yea me-2"></i>
+                    Голосование комиссии
+                </h4>
+                <small class="text-muted">Заявка #{{ application.id }}</small>
+            </div>
+            <div class="card-body">
+                {% if vote.voted_at %}
+                    <!-- Голос уже подан -->
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-check-circle me-2"></i>Ваш голос уже учтен</h6>
+                        <p class="mb-2">
+                            Вы проголосовали: 
+                            <strong>
+                                {% if vote.vote == 'approve' %}
+                                    ЗА кандидата
+                                {% elif vote.vote == 'reject' %}
+                                    ПРОТИВ кандидата
+                                {% else %}
+                                    ВОЗДЕРЖАЛСЯ
+                                {% endif %}
+                            </strong>
+                        </p>
+                        <small class="text-muted">
+                            Время голосования: {{ format_datetime(vote.voted_at) }}
+                        </small>
+                        
+                        {% if vote.justification %}
+                            <div class="mt-2">
+                                <strong>Ваш комментарий:</strong><br>
+                                <em>{{ vote.justification }}</em>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <!-- Форма голосования -->
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>Информация о голосовании</h6>
+                        <p class="mb-0">
+                            Вы приглашены принять участие в голосовании по кандидатуре на замещение вакантной должности. 
+                            Пожалуйста, внимательно ознакомьтесь с материалами кандидата и примите решение.
+                        </p>
+                    </div>
+                {% endif %}
+
+                <!-- Информация о кандидате -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-user me-2"></i>
+                            Информация о кандидате
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>{{ application.candidate.full_name }}</h6>
+                                <p class="text-muted mb-2">{{ application.candidate.email }}</p>
+                                
+                                <div class="mb-2">
+                                    <strong>Вакансия:</strong> {{ application.vacancy.title }}<br>
+                                    <strong>Департамент:</strong> {{ application.vacancy.department.name }}<br>
+                                    <strong>Дисциплина:</strong> {{ application.vacancy.discipline }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                {% if application.academic_degree %}
+                                    <strong>Ученая степень:</strong> {{ application.academic_degree }}<br>
+                                {% endif %}
+                                {% if application.academic_title %}
+                                    <strong>Ученое звание:</strong> {{ application.academic_title }}<br>
+                                {% endif %}
+                                {% if application.publications_count %}
+                                    <strong>Публикации:</strong> {{ application.publications_count }}<br>
+                                {% endif %}
+                                {% if application.h_index %}
+                                    <strong>Индекс Хирша:</strong> {{ application.h_index }}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Результаты тестов -->
+                {% if application.vacancy.require_iq_test or application.vacancy.require_eq_test %}
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-clipboard-check me-2"></i>
+                                Результаты тестирования
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            {% set test_results = get_test_results_for_application(application) %}
+                            {% if test_results %}
+                                {% for result in test_results %}
+                                <div class="d-flex justify-content-between mb-2">
+                                        <span>{{ result.test.name }}:</span>
+                                        {% set percentage = (result.score / result.max_score * 100) | round %}
+                                        <span class="badge bg-{{ 'success' if percentage >= 70 else 'warning' if percentage >= 50 else 'danger' }}">
+                                            {{ result.score }}/{{ result.max_score }} ({{ percentage }}%)
+                                    </span>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="text-muted">Тесты не требовались или не пройдены</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Решения HR и департамента -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-tasks me-2"></i>
+                            Решения комиссии
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>HR решение:</strong>
+                                {% if application.hr_decision %}
+                                    <span class="badge bg-success">{{ application.hr_decision|title }}</span><br>
+                                    <small class="text-muted">{{ format_datetime(application.hr_decision_date) }}</small>
+                                    {% if application.hr_notes %}
+                                        <div class="mt-1">
+                                            <small><em>{{ application.hr_notes }}</em></small>
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">Не принято</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Решение департамента:</strong>
+                                {% if application.dept_decision %}
+                                    <span class="badge {{ 'bg-success' if application.dept_decision == 'recommend' else 'bg-danger' }}">
+                                        {{ {'recommend': 'Рекомендовано', 'reject': 'Отклонено'}[application.dept_decision] }}
+                                    </span><br>
+                                    <small class="text-muted">{{ format_datetime(application.dept_decision_date) }}</small>
+                                    {% if application.dept_notes %}
+                                        <div class="mt-1">
+                                            <small><em>{{ application.dept_notes }}</em></small>
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">Не принято</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- Ключевые достижения -->
+                {% if application.key_publications or application.projects_list %}
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-microscope me-2"></i>
+                                Научная деятельность
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            {% if application.key_publications %}
+                                <div class="mb-3">
+                                    <strong>Ключевые публикации:</strong><br>
+                                    <div class="ms-3">{{ application.key_publications }}</div>
+                                </div>
+                            {% endif %}
+                            
+                            {% if application.projects_list %}
+                                <div>
+                                    <strong>Участие в проектах:</strong><br>
+                                    <div class="ms-3">{{ application.projects_list }}</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if not vote.voted_at %}
+                    <!-- Форма голосования -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-vote-yea me-2"></i>
+                                Ваше решение
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ url_for('submit_commission_vote', token=vote.magic_token) }}">
+                                <div class="mb-3">
+                                    <label class="form-label">Выберите ваше решение:</label>
+                                    
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="radio" name="vote" id="approve" value="approve" required>
+                                        <label class="form-check-label" for="approve">
+                                            <i class="fas fa-thumbs-up text-success me-2"></i>
+                                            <strong>ЗА</strong> - рекомендую кандидата к трудоустройству
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="radio" name="vote" id="reject" value="reject" required>
+                                        <label class="form-check-label" for="reject">
+                                            <i class="fas fa-thumbs-down text-danger me-2"></i>
+                                            <strong>ПРОТИВ</strong> - не рекомендую кандидата к трудоустройству
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="vote" id="abstain" value="abstain" required>
+                                        <label class="form-check-label" for="abstain">
+                                            <i class="fas fa-minus text-warning me-2"></i>
+                                            <strong>ВОЗДЕРЖИВАЮСЬ</strong> - не могу принять решение
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="comment" class="form-label">
+                                        Обоснование решения <span class="text-danger">*</span>
+                                    </label>
+                                    <textarea class="form-control" id="comment" name="comment" rows="4" 
+                                              required
+                                              minlength="10"
+                                              placeholder="Обязательно укажите обоснование вашего решения (минимум 10 символов)"></textarea>
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Ваш комментарий будет виден HR и администрации университета
+                                    </div>
+                                </div>
+                                
+                                <div class="alert alert-warning">
+                                    <small>
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        <strong>Внимание!</strong> После подачи голоса изменить решение будет невозможно. 
+                                        Убедитесь в правильности выбора.
+                                    </small>
+                                </div>
+                                
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-paper-plane me-2"></i>
+                                        Подать голос
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Статистика голосования -->
+        {% if total_votes > 0 %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Статистика голосования
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="text-success">
+                                <i class="fas fa-thumbs-up fa-2x"></i>
+                                <h4 class="mt-2">{{ approve_votes }}</h4>
+                                <small>ЗА</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-danger">
+                                <i class="fas fa-thumbs-down fa-2x"></i>
+                                <h4 class="mt-2">{{ reject_votes }}</h4>
+                                <small>ПРОТИВ</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-warning">
+                                <i class="fas fa-minus fa-2x"></i>
+                                <h4 class="mt-2">{{ abstain_votes }}</h4>
+                                <small>ВОЗДЕРЖАЛСЯ</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-muted">
+                                <i class="fas fa-users fa-2x"></i>
+                                <h4 class="mt-2">{{ total_votes }}</h4>
+                                <small>ВСЕГО</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress mt-3">
+                        {% set approve_percent = (approve_votes / total_votes * 100) if total_votes > 0 else 0 %}
+                        {% set reject_percent = (reject_votes / total_votes * 100) if total_votes > 0 else 0 %}
+                        {% set abstain_percent = (abstain_votes / total_votes * 100) if total_votes > 0 else 0 %}
+                        
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {{ approve_percent }}%" 
+                             aria-valuenow="{{ approve_percent }}" aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                        <div class="progress-bar bg-danger" role="progressbar" 
+                             style="width: {{ reject_percent }}%" 
+                             aria-valuenow="{{ reject_percent }}" aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                        <div class="progress-bar bg-warning" role="progressbar" 
+                             style="width: {{ abstain_percent }}%" 
+                             aria-valuenow="{{ abstain_percent }}" aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+                    
+                    <small class="text-muted mt-2 d-block text-center">
+                        Результаты видны всем участникам голосования
+                    </small>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}{{ test.name }} - Платформа поиска ППС{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0">
+                            <i class="fas fa-clipboard-check me-2"></i>
+                            {{ test.name }}
+                        </h4>
+                        <small class="text-muted">
+                            Создан {{ format_datetime(test.created_at) }}
+                        </small>
+                    </div>
+                    <div>
+                        <span class="badge {{ 'bg-success' if test.is_active else 'bg-secondary' }} me-2">
+                            {{ 'Активен' if test.is_active else 'Неактивен' }}
+                        </span>
+                        <span class="badge {{ 'bg-info' if test.type == 'iq' else 'bg-success' if test.type == 'eq' else 'bg-secondary' }}">
+                            {{ test.type.upper() if test.type != 'custom' else 'ПОЛЬЗОВАТЕЛЬСКИЙ' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-3 text-center">
+                        <i class="fas fa-question-circle fa-3x text-primary mb-2"></i>
+                        <h5>{{ questions|length }}</h5>
+                        <small class="text-muted">Вопросов</small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <i class="fas fa-user fa-3x text-info mb-2"></i>
+                        <h5>{{ test.creator.full_name }}</h5>
+                        <small class="text-muted">Создатель</small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <i class="fas fa-{{ 'brain' if test.type == 'iq' else 'heart' if test.type == 'eq' else 'cogs' }} fa-3x text-warning mb-2"></i>
+                        <h5>
+                            {% if test.type == 'iq' %}
+                                Интеллект
+                            {% elif test.type == 'eq' %}
+                                Эмоции
+                            {% else %}
+                                Пользовательский
+                            {% endif %}
+                        </h5>
+                        <small class="text-muted">Тип теста</small>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <i class="fas fa-{{ 'check' if test.is_active else 'times' }} fa-3x {{ 'text-success' if test.is_active else 'text-danger' }} mb-2"></i>
+                        <h5>{{ 'Активен' if test.is_active else 'Неактивен' }}</h5>
+                        <small class="text-muted">Статус</small>
+                    </div>
+                </div>
+
+                <h5 class="mb-3">Вопросы теста</h5>
+                
+                {% if questions %}
+                    <div class="accordion" id="questionsAccordion">
+                        {% for question in questions %}
+                            {% set question_index = loop.index0 %}
+                            <div class="accordion-item mb-2">
+                                <h2 class="accordion-header" id="heading{{ question_index }}">
+                                    <button class="accordion-button collapsed" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#collapse{{ question_index }}" 
+                                            aria-expanded="false" aria-controls="collapse{{ question_index }}">
+                                        <strong>Вопрос {{ loop.index }}:</strong>
+                                        <span class="ms-2">{{ question.question[:80] }}{{ '...' if question.question|length > 80 else '' }}</span>
+                                    </button>
+                                </h2>
+                                <div id="collapse{{ question_index }}" class="accordion-collapse collapse" 
+                                     aria-labelledby="heading{{ question_index }}" data-bs-parent="#questionsAccordion">
+                                    <div class="accordion-body">
+                                        <div class="mb-3">
+                                            <strong>Полный текст вопроса:</strong>
+                                            <p class="mt-2">{{ question.question }}</p>
+                                        </div>
+                                        
+                                        <strong>Варианты ответов:</strong>
+                                        <div class="mt-2">
+                                            {% for option in question.options %}
+                                                {% set option_index = loop.index0 %}
+                                                <div class="form-check mb-1">
+                                                    <input class="form-check-input" type="radio" 
+                                                           name="preview_{{ question_index }}" disabled
+                                                           {{ 'checked' if option_index == question.correct else '' }}>
+                                                    <label class="form-check-label {{ 'text-success fw-bold' if option_index == question.correct else '' }}">
+                                                        {{ option }}
+                                                        {% if option_index == question.correct %}
+                                                            <i class="fas fa-check text-success ms-2"></i>
+                                                        {% endif %}
+                                                    </label>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                        <div class="mt-3 p-2 bg-light rounded">
+                                            <small class="text-muted">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                Правильный ответ: <strong>{{ question.options[question.correct] }}</strong>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        В этом тесте нет вопросов или произошла ошибка при их загрузке.
+                    </div>
+                {% endif %}
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ url_for('hr_tests') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Назад к списку
+                    </a>
+                    
+                    <div>
+                        <a href="{{ url_for('hr_edit_test', test_id=test.id) }}" class="btn btn-info me-2">
+                            <i class="fas fa-edit me-2"></i>
+                            Редактировать
+                        </a>
+                        
+                        <form method="POST" action="{{ url_for('hr_toggle_test', test_id=test.id) }}" class="d-inline">
+                            <button type="submit" class="btn btn-{{ 'warning' if test.is_active else 'success' }}"
+                                    onclick="return confirm('Вы уверены, что хотите {{ 'деактивировать' if test.is_active else 'активировать' }} этот тест?')">
+                                <i class="fas fa-{{ 'pause' if test.is_active else 'play' }} me-2"></i>
+                                {{ 'Деактивировать' if test.is_active else 'Активировать' }}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
